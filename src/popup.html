@@ -13,35 +13,6 @@
       </header>
 
       <div class="section">
-        <h3>Filter Statistics</h3>
-        <div class="stats-display">
-          <div class="stat-item">
-            <span class="stat-label">Total:</span>
-            <span class="stat-value" id="totalCount">0</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Total Filtered:</span>
-            <span class="stat-value" id="filteredCount">0</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">By Follower Count:</span>
-            <span class="stat-value" id="followerFilteredCount">0</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">By Default Avatars:</span>
-            <span class="stat-value" id="avatarFilteredCount">0</span>
-          </div>
-        </div>
-        <button
-          id="refreshStats"
-          class="btn-secondary"
-          style="margin-top: 8px; width: 100%"
-        >
-          Refresh Stats
-        </button>
-      </div>
-
-      <div class="section">
         <h3>Filter Settings</h3>
 
         <div class="setting-group">
@@ -87,25 +58,12 @@
 
         <div class="input-group">
           <label for="minFollowers">Minimum Followers:</label>
-          <input type="number" id="minFollowers" min="0" placeholder="0" />
-        </div>
-
-        <div class="input-group">
-          <label for="maxFollowers">Maximum Followers:</label>
-          <input type="number" id="maxFollowers" min="0" placeholder="∞" />
+          <input type="number" id="minFollowers" min="0" placeholder="20" />
         </div>
       </div>
 
       <div class="section">
         <h3>Avatar Filters</h3>
-
-        <div class="setting-group">
-          <label class="toggle-label">
-            <input type="checkbox" id="hideVerified" />
-            <span class="toggle-slider"></span>
-            Hide Verified Accounts
-          </label>
-        </div>
 
         <div class="setting-group">
           <label class="toggle-label">
@@ -117,17 +75,84 @@
       </div>
 
       <div class="section">
-        <h3>Debug</h3>
+        <h3>Filter Statistics</h3>
+        <div class="stats-display">
+          <div class="stat-item">
+            <span class="stat-label">Total:</span>
+            <span class="stat-value" id="totalCount">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Total Filtered:</span>
+            <span class="stat-value" id="filteredCount">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">By Follower Count:</span>
+            <span class="stat-value" id="followerFilteredCount">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">By Default Avatars:</span>
+            <span class="stat-value" id="avatarFilteredCount">0</span>
+          </div>
+        </div>
+        <button
+          id="refreshStats"
+          class="btn-secondary"
+          style="margin-top: 8px; width: 100%"
+        >
+          Refresh Stats
+        </button>
+      </div>
 
-        <div class="setting-group">
-          <label class="toggle-label">
-            <input type="checkbox" id="debugMode" />
-            <span class="toggle-slider"></span>
-            Enable Debug Mode
-          </label>
-          <p class="setting-description">
-            Show detailed logs in browser console
-          </p>
+      <div class="section">
+        <div class="advanced-header" id="advancedToggle">
+          <h3>Advanced Settings</h3>
+          <span class="expand-icon" id="expandIcon">▼</span>
+        </div>
+        <div
+          class="advanced-content"
+          id="advancedContent"
+          style="display: none"
+        >
+          <div class="input-group">
+            <label for="grayscaleOpacity"
+              >Grayscale Opacity: <span id="opacityValue">0.3</span></label
+            >
+            <input
+              type="range"
+              id="grayscaleOpacity"
+              min="0.1"
+              max="1.0"
+              step="0.1"
+              value="0.3"
+            />
+            <p class="setting-description">
+              Adjust the opacity of filtered comments in grayscale mode
+            </p>
+          </div>
+
+          <div class="input-group">
+            <label for="maxFollowers">Maximum Followers:</label>
+            <input type="number" id="maxFollowers" min="0" placeholder="∞" />
+          </div>
+
+          <div class="setting-group">
+            <label class="toggle-label">
+              <input type="checkbox" id="hideVerified" />
+              <span class="toggle-slider"></span>
+              Hide Verified Accounts
+            </label>
+          </div>
+
+          <div class="setting-group">
+            <label class="toggle-label">
+              <input type="checkbox" id="debugMode" />
+              <span class="toggle-slider"></span>
+              Enable Debug Mode
+            </label>
+            <p class="setting-description">
+              Show detailed logs in browser console
+            </p>
+          </div>
         </div>
       </div>
 

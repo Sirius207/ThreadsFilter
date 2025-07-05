@@ -34,13 +34,15 @@ class BackgroundService {
 
   async setDefaultSettings() {
     const defaultSettings = {
-      enableFilter: false,
+      enableFilter: true,
       showFollowerCount: true,
-      displayMode: "hide",
-      minFollowers: null,
+      displayMode: "grayscale",
+      minFollowers: 20,
       maxFollowers: null,
       hideVerified: false,
-      hideDefaultAvatars: false,
+      hideDefaultAvatars: true,
+      debug: false,
+      grayscaleOpacity: 0.3,
     };
 
     try {

@@ -3,11 +3,12 @@ const DEFAULT_SETTINGS = {
   enableFilter: true,
   showFollowerCount: true,
   displayMode: "grayscale",
-  minFollowers: null,
+  minFollowers: 20,
   maxFollowers: null,
   hideVerified: false,
   hideDefaultAvatars: true,
   debug: false,
+  grayscaleOpacity: 0.3,
 };
 
 class PopupController {
@@ -43,9 +44,23 @@ class PopupController {
   async loadSettings() {
     try {
       const result = await chrome.storage.sync.get("threadsFilterSettings");
-      this.settings = { ...DEFAULT_SETTINGS, ...result.threadsFilterSettings };
+
+      // If no settings exist (first install), use defaults and save them
+      if (!result.threadsFilterSettings) {
+        this.settings = { ...DEFAULT_SETTINGS };
+        // Save the default settings to storage
+        await chrome.storage.sync.set({ threadsFilterSettings: this.settings });
+      } else {
+        // Merge existing settings with defaults (in case new settings were added)
+        this.settings = {
+          ...DEFAULT_SETTINGS,
+          ...result.threadsFilterSettings,
+        };
+      }
     } catch (error) {
       console.error("Failed to load settings:", error);
+      // Fallback to defaults if there's an error
+      this.settings = { ...DEFAULT_SETTINGS };
     }
   }
 
@@ -136,6 +151,19 @@ class PopupController {
       this.saveSettings();
     });
 
+    // Grayscale opacity slider
+    const opacitySlider = document.getElementById("grayscaleOpacity");
+    const opacityValue = document.getElementById("opacityValue");
+
+    if (opacitySlider && opacityValue) {
+      opacitySlider.addEventListener("input", (e) => {
+        const value = parseFloat(e.target.value);
+        this.settings.grayscaleOpacity = value;
+        opacityValue.textContent = value.toFixed(1);
+        this.saveSettings();
+      });
+    }
+
     // Buttons
     const resetSettingsBtn = document.getElementById("resetSettings");
     const refreshStatsBtn = document.getElementById("refreshStats");
@@ -154,6 +182,29 @@ class PopupController {
     refreshStatsBtn.addEventListener("click", () => {
       this.requestStats();
     });
+
+    // Advanced Settings toggle
+    const advancedToggle = document.getElementById("advancedToggle");
+    const advancedContent = document.getElementById("advancedContent");
+    const expandIcon = document.getElementById("expandIcon");
+
+    if (advancedToggle && advancedContent && expandIcon) {
+      advancedToggle.addEventListener("click", () => {
+        const isExpanded = advancedContent.style.display !== "none";
+
+        if (isExpanded) {
+          // Collapse
+          advancedContent.style.display = "none";
+          advancedToggle.classList.remove("expanded");
+          expandIcon.textContent = "▼";
+        } else {
+          // Expand
+          advancedContent.style.display = "block";
+          advancedToggle.classList.add("expanded");
+          expandIcon.textContent = "▲";
+        }
+      });
+    }
 
     if (this.settings.debug) {
       console.log("Popup: Events bound successfully");
@@ -187,6 +238,25 @@ class PopupController {
 
     // Update debug mode
     document.getElementById("debugMode").checked = this.settings.debug;
+
+    // Update grayscale opacity slider
+    const opacitySlider = document.getElementById("grayscaleOpacity");
+    const opacityValue = document.getElementById("opacityValue");
+    if (opacitySlider && opacityValue) {
+      opacitySlider.value = this.settings.grayscaleOpacity;
+      opacityValue.textContent = this.settings.grayscaleOpacity.toFixed(1);
+    }
+
+    // Set Advanced Settings initial state (collapsed by default)
+    const advancedContent = document.getElementById("advancedContent");
+    const advancedToggle = document.getElementById("advancedToggle");
+    const expandIcon = document.getElementById("expandIcon");
+
+    if (advancedContent && advancedToggle && expandIcon) {
+      advancedContent.style.display = "none";
+      advancedToggle.classList.remove("expanded");
+      expandIcon.textContent = "▼";
+    }
   }
 
   async resetToDefaults() {

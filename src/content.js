@@ -9,13 +9,15 @@ class ThreadsCommentFilter {
   constructor() {
     this.log("ThreadsCommentFilter: Constructor called");
     this.settings = {
-      enableFilter: false,
+      enableFilter: true,
       showFollowerCount: true,
-      displayMode: "hide",
-      minFollowers: null,
+      displayMode: "grayscale",
+      minFollowers: 20,
       maxFollowers: null,
       hideVerified: false,
-      hideDefaultAvatars: false,
+      hideDefaultAvatars: true,
+      debug: false,
+      grayscaleOpacity: 0.3,
     };
 
     this.filteredComments = new Set();
@@ -23,7 +25,6 @@ class ThreadsCommentFilter {
     this.avatarFilteredComments = new Set();
     this.observer = null;
     this.followerCache = new Map();
-    this.debug = false; // Debug mode flag
 
     this.init();
   }
@@ -74,6 +75,8 @@ class ThreadsCommentFilter {
           this.settings = message.settings;
           this.debug = this.settings.debug || false; // Update debug mode
           this.applyFilters();
+          // Update opacity for existing grayscale comments
+          this.updateGrayscaleOpacity();
           break;
         case "applySettings":
           this.log("ThreadsCommentFilter: Applying settings manually");
@@ -1003,12 +1006,18 @@ class ThreadsCommentFilter {
       commentElement.style.display = "none";
     } else if (this.settings.displayMode === "grayscale") {
       commentElement.classList.add("threads-filter-grayscale");
+      // Apply custom opacity value
+      commentElement.style.setProperty(
+        "--threads-filter-opacity",
+        this.settings.grayscaleOpacity || 0.3
+      );
     }
   }
 
   removeFilterStyle(commentElement) {
     commentElement.style.display = "";
     commentElement.classList.remove("threads-filter-grayscale");
+    commentElement.style.removeProperty("--threads-filter-opacity");
     this.followerFilteredComments.delete(commentElement);
     this.avatarFilteredComments.delete(commentElement);
   }
@@ -1407,6 +1416,19 @@ class ThreadsCommentFilter {
         error
       );
     }
+  }
+
+  // Update grayscale opacity for existing grayscale comments when the setting changes
+  updateGrayscaleOpacity() {
+    const processedComments = document.querySelectorAll(
+      ".threads-filter-grayscale"
+    );
+    processedComments.forEach((comment) => {
+      comment.style.setProperty(
+        "--threads-filter-opacity",
+        this.settings.grayscaleOpacity || 0.3
+      );
+    });
   }
 }
 

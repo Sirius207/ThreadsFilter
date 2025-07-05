@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Threads Comment Filter",
+  "name": "Threads Comments Filter",
   "version": "1.0.0",
   "description": "Filter Threads comments by follower count and avatar characteristics with flexible display modes",
   "permissions": ["storage", "activeTab", "scripting"],
@@ -21,8 +21,10 @@
     "default_title": "Threads Comment Filter"
   },
   "icons": {
-    "16": "icons/icon16.svg",
-    "48": "icons/icon48.svg",
-    "128": "icons/icon128.svg"
+    "16": "icons/icon16.png",
+    "19": "icons/icon19.png",
+    "38": "icons/icon38.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   }
 }
