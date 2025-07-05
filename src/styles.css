@@ -1,0 +1,152 @@
+/* Threads Comment Filter Extension Styles */
+
+/* Grayscale filter for comments */
+.threads-filter-grayscale {
+    filter: grayscale(100%);
+    opacity: 0.3;
+    transition: all 0.3s ease;
+}
+
+.threads-filter-grayscale:hover {
+    filter: grayscale(50%);
+    opacity: 0.8;
+}
+
+/* Follower count styling */
+.threads-follower-count {
+    color: #65676b !important;
+    font-size: 0.9em !important;
+    font-weight: normal !important;
+    margin-left: 4px !important;
+    display: inline !important;
+}
+
+/* Hidden comments indicator */
+.threads-filter-hidden::before {
+    content: "Comment hidden by filter";
+    display: block;
+    padding: 8px 12px;
+    background: #f0f2f5;
+    color: #65676b;
+    font-size: 12px;
+    border-radius: 6px;
+    margin: 4px 0;
+    border: 1px solid #e4e6ea;
+}
+
+/* Enhanced styling for filtered comments in grayscale mode */
+.threads-filter-grayscale {
+    position: relative;
+    border-left: 3px solid #e4e6ea;
+    padding-left: 8px;
+    margin-left: 4px;
+}
+
+.threads-filter-grayscale::before {
+    content: "Filtered";
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0, 0, 0, 0.1);
+    color: #65676b;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    pointer-events: none;
+}
+
+/* Smooth transitions for all filter effects */
+[data-threads-filter-data] {
+    transition: all 0.3s ease;
+}
+
+/* Ensure follower counts don't break layout */
+.threads-follower-count {
+    white-space: nowrap;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .threads-follower-count {
+        font-size: 0.8em !important;
+        margin-left: 2px !important;
+    }
+    
+    .threads-filter-grayscale::before {
+        font-size: 9px;
+        padding: 1px 4px;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .threads-filter-grayscale {
+        filter: contrast(150%) grayscale(100%);
+        border-left-color: #000;
+    }
+    
+    .threads-follower-count {
+        color: #000 !important;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .threads-filter-grayscale,
+    [data-threads-filter-data] {
+        transition: none;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .threads-follower-count {
+        color: #b0b3b8 !important;
+    }
+    
+    .threads-filter-hidden::before {
+        background: #3a3b3c;
+        color: #b0b3b8;
+        border-color: #4e4f50;
+    }
+    
+    .threads-filter-grayscale {
+        border-left-color: #4e4f50;
+    }
+    
+    .threads-filter-grayscale::before {
+        background: rgba(255, 255, 255, 0.1);
+        color: #b0b3b8;
+    }
+}
+
+/* Accessibility improvements */
+.threads-filter-grayscale[aria-hidden="true"] {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+/* Focus indicators for interactive elements */
+.threads-follower-count:focus {
+    outline: 2px solid #1877f2;
+    outline-offset: 1px;
+}
+
+/* Animation for newly processed comments */
+@keyframes threads-filter-process {
+    from {
+        opacity: 0;
+        transform: translateY(-2px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.threads-filter-processed .threads-follower-count {
+    animation: threads-filter-process 0.3s ease-out;
+}
