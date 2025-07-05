@@ -53,7 +53,7 @@ class BackgroundService {
 
   handleIconClick(tab) {
     // Icon click is handled by popup.html
-    // This method exists for potential future functionality
+    console.log("Tab clicked:", tab);
   }
 
   handleTabUpdate(tabId, changeInfo, tab) {
@@ -73,6 +73,7 @@ class BackgroundService {
       // Check if content script is already loaded by trying to send a message
       await chrome.tabs.sendMessage(tabId, { action: "ping" });
     } catch (error) {
+      console.error("Failed to ping content script:", error);
       // Content script not loaded, inject it
       try {
         await chrome.scripting.executeScript({

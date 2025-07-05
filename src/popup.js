@@ -245,7 +245,7 @@ class PopupController {
   }
 
   setupStatsListener() {
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    chrome.runtime.onMessage.addListener((message) => {
       if (message.action === "updateStats") {
         this.stats = message.stats;
         this.updateStatsDisplay();
