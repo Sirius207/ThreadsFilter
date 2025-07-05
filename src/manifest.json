@@ -3,14 +3,8 @@
   "name": "Threads Comment Filter",
   "version": "1.0.0",
   "description": "Filter Threads comments by follower count and avatar characteristics with flexible display modes",
-  "permissions": [
-    "storage",
-    "activeTab",
-    "scripting"
-  ],
-  "host_permissions": [
-    "https://www.threads.com/*"
-  ],
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": ["https://www.threads.com/*"],
   "background": {
     "service_worker": "background.js"
   },
