@@ -155,6 +155,29 @@ class PopupController {
       this.requestStats();
     });
 
+    // Advanced Settings toggle
+    const advancedToggle = document.getElementById("advancedToggle");
+    const advancedContent = document.getElementById("advancedContent");
+    const expandIcon = document.getElementById("expandIcon");
+
+    if (advancedToggle && advancedContent && expandIcon) {
+      advancedToggle.addEventListener("click", () => {
+        const isExpanded = advancedContent.style.display !== "none";
+
+        if (isExpanded) {
+          // Collapse
+          advancedContent.style.display = "none";
+          advancedToggle.classList.remove("expanded");
+          expandIcon.textContent = "▼";
+        } else {
+          // Expand
+          advancedContent.style.display = "block";
+          advancedToggle.classList.add("expanded");
+          expandIcon.textContent = "▲";
+        }
+      });
+    }
+
     if (this.settings.debug) {
       console.log("Popup: Events bound successfully");
     }
@@ -187,6 +210,17 @@ class PopupController {
 
     // Update debug mode
     document.getElementById("debugMode").checked = this.settings.debug;
+
+    // Set Advanced Settings initial state (collapsed by default)
+    const advancedContent = document.getElementById("advancedContent");
+    const advancedToggle = document.getElementById("advancedToggle");
+    const expandIcon = document.getElementById("expandIcon");
+
+    if (advancedContent && advancedToggle && expandIcon) {
+      advancedContent.style.display = "none";
+      advancedToggle.classList.remove("expanded");
+      expandIcon.textContent = "▼";
+    }
   }
 
   async resetToDefaults() {

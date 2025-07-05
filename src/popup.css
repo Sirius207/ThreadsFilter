@@ -274,3 +274,57 @@ h3 {
 .btn-danger:active {
   transform: translateY(1px);
 }
+
+/* Advanced Settings Styles */
+.advanced-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: all 0.3s ease;
+}
+
+.advanced-header:hover {
+  opacity: 0.8;
+}
+
+.advanced-header h3 {
+  margin-bottom: 0;
+  color: #65676b;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.expand-icon {
+  font-size: 12px;
+  color: #65676b;
+  transition: transform 0.3s ease;
+  user-select: none;
+}
+
+.advanced-header.expanded .expand-icon {
+  transform: rotate(180deg);
+}
+
+.advanced-content {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e1e5e9;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.advanced-content.hidden {
+  display: none;
+}
