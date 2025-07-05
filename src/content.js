@@ -80,7 +80,7 @@ class ThreadsCommentFilter {
           this.settings = message.settings;
           this.applyFilters();
           break;
-        case "getStats":
+        case "getStats": {
           this.log("ThreadsCommentFilter: Sending stats");
           // Dynamically calculate total processed comments to ensure accuracy
           const totalProcessed = document.querySelectorAll(
@@ -106,6 +106,7 @@ class ThreadsCommentFilter {
             avatarFilteredCount: this.avatarFilteredComments.size,
           });
           break;
+        }
         case "restoreAll":
           this.log("ThreadsCommentFilter: Restoring all comments");
           this.restoreAllComments();
@@ -414,7 +415,7 @@ class ThreadsCommentFilter {
     const usernameLink = commentElement.querySelector('a[href*="/@"]');
     if (usernameLink) {
       const href = usernameLink.getAttribute("href");
-      const match = href.match(/\/@([^\/]+)/);
+      const match = href.match(/\/@([^/]+)/);
       if (match) {
         authorInfo.username = match[1];
       }
@@ -1062,14 +1063,14 @@ class ThreadsCommentFilter {
           index === 0
             ? "true (default)"
             : index === 1
-            ? "false (regular)"
-            : "true (default)",
+              ? "false (regular)"
+              : "true (default)",
         description:
           index === 0
             ? "Known default avatar"
             : index === 1
-            ? "Known regular avatar"
-            : "User reported avatar (technically default)",
+              ? "Known regular avatar"
+              : "User reported avatar (technically default)",
         explanation:
           index === 2
             ? "This URL contains the default file ID (464760996_1254146839119862_3605321457742435801_n) and anonymous cache key, indicating it is technically a default avatar even if it looks different visually."
@@ -1402,7 +1403,8 @@ class ThreadsCommentFilter {
     } catch (error) {
       // Popup might not be open, which is normal
       this.log(
-        "Threads Filter: Could not send stats to popup (popup may not be open)"
+        "Threads Filter: Could not send stats to popup (popup may not be open):",
+        error
       );
     }
   }
