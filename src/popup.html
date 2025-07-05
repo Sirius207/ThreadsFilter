@@ -58,7 +58,7 @@
 
         <div class="input-group">
           <label for="minFollowers">Minimum Followers:</label>
-          <input type="number" id="minFollowers" min="0" placeholder="0" />
+          <input type="number" id="minFollowers" min="0" placeholder="20" />
         </div>
       </div>
 
@@ -113,6 +113,23 @@
           id="advancedContent"
           style="display: none"
         >
+          <div class="input-group">
+            <label for="grayscaleOpacity"
+              >Grayscale Opacity: <span id="opacityValue">0.3</span></label
+            >
+            <input
+              type="range"
+              id="grayscaleOpacity"
+              min="0.1"
+              max="1.0"
+              step="0.1"
+              value="0.3"
+            />
+            <p class="setting-description">
+              Adjust the opacity of filtered comments in grayscale mode
+            </p>
+          </div>
+
           <div class="input-group">
             <label for="maxFollowers">Maximum Followers:</label>
             <input type="number" id="maxFollowers" min="0" placeholder="∞" />

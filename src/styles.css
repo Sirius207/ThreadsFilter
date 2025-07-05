@@ -3,7 +3,7 @@
 /* Grayscale filter for comments */
 .threads-filter-grayscale {
   filter: grayscale(100%);
-  opacity: 0.3;
+  opacity: var(--threads-filter-opacity, 0.3);
   transition: all 0.3s ease;
 }
 

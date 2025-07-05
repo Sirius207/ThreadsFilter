@@ -125,19 +125,20 @@ describe("Utility Functions", () => {
         return { shouldFilter: false };
       };
 
-      const defaultSettings = {
-        enableFilter: false,
+      const validSettings = {
+        enableFilter: true,
         showFollowerCount: true,
-        displayMode: "hide",
-        minFollowers: null,
+        displayMode: "grayscale",
+        minFollowers: 20,
         maxFollowers: null,
         hideVerified: false,
-        hideDefaultAvatars: false,
+        hideDefaultAvatars: true,
         debug: false,
+        grayscaleOpacity: 0.3,
       };
 
       // Test min followers filter
-      const settingsWithMin = { ...defaultSettings, minFollowers: 100 };
+      const settingsWithMin = { ...validSettings, minFollowers: 100 };
       const commentWithLowFollowers = {
         followers: 50,
         isVerified: false,
@@ -149,7 +150,7 @@ describe("Utility Functions", () => {
       ).toBe(true);
 
       // Test max followers filter
-      const settingsWithMax = { ...defaultSettings, maxFollowers: 1000 };
+      const settingsWithMax = { ...validSettings, maxFollowers: 1000 };
       const commentWithHighFollowers = {
         followers: 2000,
         isVerified: false,
@@ -161,7 +162,7 @@ describe("Utility Functions", () => {
       ).toBe(true);
 
       // Test verified account filter
-      const settingsHideVerified = { ...defaultSettings, hideVerified: true };
+      const settingsHideVerified = { ...validSettings, hideVerified: true };
       const verifiedComment = {
         followers: 500,
         isVerified: true,
@@ -173,7 +174,7 @@ describe("Utility Functions", () => {
 
       // Test default avatar filter
       const settingsHideDefaultAvatars = {
-        ...defaultSettings,
+        ...validSettings,
         hideDefaultAvatars: true,
       };
       const defaultAvatarComment = {
@@ -193,7 +194,7 @@ describe("Utility Functions", () => {
         hasDefaultAvatar: false,
       };
       expect(
-        shouldFilterComment(normalComment, defaultSettings).shouldFilter
+        shouldFilterComment(normalComment, validSettings).shouldFilter
       ).toBe(false);
     });
   });
@@ -209,23 +210,27 @@ describe("Utility Functions", () => {
           "maxFollowers",
           "hideVerified",
           "hideDefaultAvatars",
+          "debug",
+          "grayscaleOpacity",
         ];
 
         return requiredFields.every((field) => field in settings);
       };
 
       const validSettings = {
-        enableFilter: false,
+        enableFilter: true,
         showFollowerCount: true,
-        displayMode: "hide",
-        minFollowers: null,
+        displayMode: "grayscale",
+        minFollowers: 20,
         maxFollowers: null,
         hideVerified: false,
-        hideDefaultAvatars: false,
+        hideDefaultAvatars: true,
+        debug: false,
+        grayscaleOpacity: 0.3,
       };
 
       const invalidSettings = {
-        enableFilter: false,
+        enableFilter: true,
         showFollowerCount: true,
         // Missing other required fields
       };

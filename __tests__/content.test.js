@@ -7,14 +7,15 @@ describe("ThreadsCommentFilter", () => {
   beforeEach(() => {
     // Mock settings
     mockSettings = {
-      enableFilter: false,
+      enableFilter: true,
       showFollowerCount: true,
-      displayMode: "hide",
-      minFollowers: null,
+      displayMode: "grayscale",
+      minFollowers: 20,
       maxFollowers: null,
       hideVerified: false,
-      hideDefaultAvatars: false,
+      hideDefaultAvatars: true,
       debug: false,
+      grayscaleOpacity: 0.3,
     };
   });
 
@@ -257,6 +258,123 @@ describe("ThreadsCommentFilter", () => {
       // Test showing element
       element.style.display = "";
       expect(element.style.display).toBe("");
+    });
+  });
+
+  describe("Grayscale opacity functionality", () => {
+    test("should apply custom opacity to grayscale comments", () => {
+      // Mock the applyFilterStyle method logic
+      const applyFilterStyle = (commentElement, settings) => {
+        if (settings.displayMode === "hide") {
+          commentElement.style.display = "none";
+        } else if (settings.displayMode === "grayscale") {
+          commentElement.classList.add("threads-filter-grayscale");
+          // Apply custom opacity value
+          commentElement.style.setProperty(
+            "--threads-filter-opacity",
+            settings.grayscaleOpacity || 0.3
+          );
+        }
+      };
+
+      // Create a mock comment element
+      const mockCommentElement = {
+        style: {
+          display: "",
+          setProperty: jest.fn(),
+        },
+        classList: {
+          add: jest.fn(),
+          remove: jest.fn(),
+        },
+      };
+
+      // Test with default opacity
+      const settingsWithDefaultOpacity = {
+        ...mockSettings,
+        displayMode: "grayscale",
+        grayscaleOpacity: 0.3,
+      };
+
+      applyFilterStyle(mockCommentElement, settingsWithDefaultOpacity);
+
+      expect(mockCommentElement.classList.add).toHaveBeenCalledWith(
+        "threads-filter-grayscale"
+      );
+      expect(mockCommentElement.style.setProperty).toHaveBeenCalledWith(
+        "--threads-filter-opacity",
+        0.3
+      );
+
+      // Test with custom opacity
+      const settingsWithCustomOpacity = {
+        ...mockSettings,
+        displayMode: "grayscale",
+        grayscaleOpacity: 0.7,
+      };
+
+      // Reset mock
+      mockCommentElement.classList.add.mockClear();
+      mockCommentElement.style.setProperty.mockClear();
+
+      applyFilterStyle(mockCommentElement, settingsWithCustomOpacity);
+
+      expect(mockCommentElement.classList.add).toHaveBeenCalledWith(
+        "threads-filter-grayscale"
+      );
+      expect(mockCommentElement.style.setProperty).toHaveBeenCalledWith(
+        "--threads-filter-opacity",
+        0.7
+      );
+
+      // Test with undefined opacity (should use default)
+      const settingsWithUndefinedOpacity = {
+        ...mockSettings,
+        displayMode: "grayscale",
+        grayscaleOpacity: undefined,
+      };
+
+      // Reset mock
+      mockCommentElement.classList.add.mockClear();
+      mockCommentElement.style.setProperty.mockClear();
+
+      applyFilterStyle(mockCommentElement, settingsWithUndefinedOpacity);
+
+      expect(mockCommentElement.classList.add).toHaveBeenCalledWith(
+        "threads-filter-grayscale"
+      );
+      expect(mockCommentElement.style.setProperty).toHaveBeenCalledWith(
+        "--threads-filter-opacity",
+        0.3
+      );
+    });
+
+    test("should remove opacity property when removing grayscale filter", () => {
+      const removeFilterStyle = (commentElement) => {
+        commentElement.style.display = "";
+        commentElement.classList.remove("threads-filter-grayscale");
+        commentElement.style.removeProperty("--threads-filter-opacity");
+      };
+
+      const mockCommentElement = {
+        style: {
+          display: "",
+          removeProperty: jest.fn(),
+        },
+        classList: {
+          remove: jest.fn(),
+        },
+      };
+
+      removeFilterStyle(mockCommentElement);
+
+      expect(mockCommentElement.style.display).toBe("");
+      expect(mockCommentElement.classList.remove).toHaveBeenCalledWith(
+        "threads-filter-grayscale"
+      );
+      expect(mockCommentElement.style.removeProperty).toHaveBeenCalledWith(
+        "--threads-filter-opacity"
+      );
     });
   });
 });
