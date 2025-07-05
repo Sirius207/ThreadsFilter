@@ -1,0 +1,31 @@
+{
+  "scripts": {
+    "build": "webpack --mode production",
+    "dev": "webpack --mode development --watch",
+    "test": "jest",
+    "lint": "eslint src/",
+    "format": "prettier --write src/",
+    "format:check": "prettier --check src/",
+    "type-check": "tsc --noEmit",
+    "package": "webpack --mode production && crx pack dist/",
+    "validate-manifest": "web-ext lint --source-dir=src"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.30.1",
+    "@types/chrome": "^0.0.x",
+    "copy-webpack-plugin": "^11.x",
+    "crx": "^5.x",
+    "css-loader": "^6.x",
+    "eslint": "^9.30.1",
+    "eslint-config-prettier": "^9.x",
+    "globals": "^16.3.0",
+    "html-webpack-plugin": "^5.x",
+    "jest": "^29.x",
+    "jest-environment-jsdom": "^30.0.4",
+    "prettier": "3.6.2",
+    "style-loader": "^3.x",
+    "web-ext": "^7.x",
+    "webpack": "^5.x",
+    "webpack-cli": "^5.x"
+  }
+}
