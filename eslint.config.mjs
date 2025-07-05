@@ -17,6 +17,16 @@ export default [
     },
   },
   {
+    files: ["commitlint.config.js"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        module: "readonly",
+      },
+      sourceType: "commonjs",
+    },
+  },
+  {
     files: [
       "**/__tests__/**/*.js",
       "**/*.test.js",
