@@ -18,6 +18,7 @@ class ThreadsCommentFilter {
       hideDefaultAvatars: true,
       debug: false,
       grayscaleOpacity: 0.3,
+      clickToShow: false,
     };
 
     this.filteredComments = new Set();
@@ -77,6 +78,7 @@ class ThreadsCommentFilter {
           this.applyFilters();
           // Update opacity for existing grayscale comments
           this.updateGrayscaleOpacity();
+          this.updateClickMode();
           break;
         case "applySettings":
           this.log("ThreadsCommentFilter: Applying settings manually");
@@ -1011,13 +1013,66 @@ class ThreadsCommentFilter {
         "--threads-filter-opacity",
         this.settings.grayscaleOpacity || 0.3
       );
+
+      // Handle click mode
+      if (this.settings.clickToShow) {
+        commentElement.classList.add("click-mode");
+        this.setupClickHandler(commentElement);
+      } else {
+        commentElement.classList.remove("click-mode");
+        commentElement.classList.remove("showing");
+        this.removeClickHandler(commentElement);
+      }
+    }
+  }
+
+  setupClickHandler(commentElement) {
+    // Remove existing click handler to avoid duplicates
+    this.removeClickHandler(commentElement);
+
+    const clickHandler = (e) => {
+      // Prevent event bubbling to avoid triggering other click events
+      e.stopPropagation();
+
+      // Toggle the showing state
+      if (commentElement.classList.contains("showing")) {
+        commentElement.classList.remove("showing");
+      } else {
+        commentElement.classList.add("showing");
+      }
+
+      this.log("Threads Filter: Toggled click mode for comment");
+    };
+
+    // Store the handler reference for later removal
+    commentElement.dataset.threadsClickHandler = "true";
+    commentElement.addEventListener("click", clickHandler);
+
+    // Store the handler function for cleanup
+    commentElement._threadsClickHandler = clickHandler;
+  }
+
+  removeClickHandler(commentElement) {
+    if (commentElement._threadsClickHandler) {
+      commentElement.removeEventListener(
+        "click",
+        commentElement._threadsClickHandler
+      );
+      delete commentElement._threadsClickHandler;
+      delete commentElement.dataset.threadsClickHandler;
     }
   }
 
   removeFilterStyle(commentElement) {
     commentElement.style.display = "";
     commentElement.classList.remove("threads-filter-grayscale");
+    commentElement.classList.remove("click-mode");
+    commentElement.classList.remove("showing");
     commentElement.style.removeProperty("--threads-filter-opacity");
+
+    // Remove click handler if exists
+    this.removeClickHandler(commentElement);
+
     this.followerFilteredComments.delete(commentElement);
     this.avatarFilteredComments.delete(commentElement);
   }
@@ -1428,6 +1483,23 @@ class ThreadsCommentFilter {
         "--threads-filter-opacity",
         this.settings.grayscaleOpacity || 0.3
       );
+    });
+  }
+
+  // Update click mode for existing grayscale comments when the setting changes
+  updateClickMode() {
+    const processedComments = document.querySelectorAll(
+      ".threads-filter-grayscale"
+    );
+    processedComments.forEach((comment) => {
+      if (this.settings.clickToShow) {
+        comment.classList.add("click-mode");
+        this.setupClickHandler(comment);
+      } else {
+        comment.classList.remove("click-mode");
+        comment.classList.remove("showing");
+        this.removeClickHandler(comment);
+      }
     });
   }
 }

@@ -7,7 +7,24 @@
   transition: all 0.3s ease;
 }
 
+/* Hover mode (default) */
 .threads-filter-grayscale:hover {
+  filter: grayscale(50%);
+  opacity: 0.8;
+}
+
+/* Click mode - disable hover effects */
+.threads-filter-grayscale.click-mode {
+  cursor: pointer;
+}
+
+.threads-filter-grayscale.click-mode:hover {
+  filter: grayscale(100%);
+  opacity: var(--threads-filter-opacity, 0.3);
+}
+
+/* Click mode - when clicked/toggled */
+.threads-filter-grayscale.click-mode.showing {
   filter: grayscale(50%);
   opacity: 0.8;
 }
