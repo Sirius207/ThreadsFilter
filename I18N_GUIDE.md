@@ -47,7 +47,7 @@ The `I18n` class provides:
 
 ### Key Methods
 
-- `getMessage(key, substitutions)`: Get translated text by key
+- `getMessage(key, substitutions)`: Get translated text by key using Chrome's i18n API
 - `getLocale()`: Get current locale
 - `getLanguageConfig()`: Get language configuration for current locale
 - `usesScript(script)`: Check if current locale uses a specific script family
@@ -64,11 +64,47 @@ The `I18n` class provides:
 
 ### Features
 
-- Automatic language detection based on browser settings
-- Language preference persistence using Chrome storage
-- Dynamic language switching with popup reload
-- Fallback to English if translation is missing
-- Support for placeholder substitutions
+- **Hybrid Translation System**: Uses Chrome's i18n API as primary source with internal translations as fallback
+- **Dynamic Language Switching**: Internal translations enable instant language changes without extension reload
+- **Chrome i18n Integration**: Leverages Chrome's built-in i18n system for manifest and extension metadata
+- **Automatic language detection** based on browser settings
+- **Language preference persistence** using Chrome storage
+- **Dynamic language switching** with popup reload
+- **Robust fallback system** with multiple translation sources
+- **Support for placeholder substitutions**
+
+## Translation Architecture
+
+### Hybrid System Design
+
+The extension uses a hybrid translation system that combines Chrome's i18n API with internal translations:
+
+#### Chrome i18n API (`src/_locales/[locale]/messages.json`)
+
+- **Primary source** for translations
+- Used for manifest metadata (`__MSG_appName__`, `__MSG_appDescription__`)
+- Provides Chrome's built-in i18n functionality
+- Requires extension reload to detect new languages
+
+#### Internal Translations (`src/i18n.js`)
+
+- **Fallback source** for dynamic language switching
+- Enables instant language changes without extension reload
+- Provides immediate feedback when users switch languages
+- Maintains consistency with Chrome i18n translations
+
+#### Translation Priority
+
+1. **Internal translations** (for non-default locales during dynamic switching)
+2. **Chrome i18n API** (primary source for all translations)
+3. **Internal fallback** (current locale → default locale → key)
+
+### Why This Hybrid Approach?
+
+- **User Experience**: Users can switch languages instantly without reloading the extension
+- **Development Efficiency**: Changes to translations in `messages.json` files are reflected after reload
+- **Reliability**: Multiple fallback sources ensure translations always work
+- **Chrome Integration**: Proper integration with Chrome's i18n system for manifest and metadata
 
 ## Implementation Details
 

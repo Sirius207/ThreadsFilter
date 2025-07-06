@@ -49,10 +49,9 @@ class I18n {
     };
 
     this.translations = {
+      // Minimal internal translations as fallback for dynamic language switching
+      // Primary translations are in src/_locales/[locale]/messages.json
       en: {
-        appName: "Threads Comment Filter",
-        appDescription:
-          "Filter Threads comments by follower count and avatar characteristics with flexible display modes",
         popupTitle: "Threads Comment Filter",
         filterSettings: "Filter Settings",
         enableCommentFiltering: "Enable Comment Filtering",
@@ -85,9 +84,6 @@ class I18n {
         resetToDefaults: "Reset to Defaults",
       },
       zh_TW: {
-        appName: "Threads 留言過濾器",
-        appDescription:
-          "根據追蹤者數量和頭像特徵過濾 Threads 留言，支援靈活的顯示模式",
         popupTitle: "Threads 留言過濾器",
         filterSettings: "過濾設定",
         enableCommentFiltering: "啟用留言過濾",
@@ -119,9 +115,6 @@ class I18n {
         resetToDefaults: "重設為預設值",
       },
       ja: {
-        appName: "Threads コメントフィルター",
-        appDescription:
-          "フォロワー数とアバターの特徴に基づいてThreadsのコメントをフィルタリングし、柔軟な表示モードをサポート",
         popupTitle: "Threads コメントフィルター",
         filterSettings: "フィルター設定",
         enableCommentFiltering: "コメントフィルタリングを有効にする",
@@ -163,9 +156,8 @@ class I18n {
    * @returns {string} The translated string
    */
   getMessage(key, substitutions = []) {
-    // If we're not using the default locale, prioritize our internal translations
+    // For dynamic language switching, prioritize internal translations
     if (this.currentLocale !== this.fallbackLocale) {
-      // Try our internal translations first
       const internalTranslation = this.translations[this.currentLocale]?.[key];
       if (internalTranslation) {
         console.log(
@@ -176,28 +168,26 @@ class I18n {
     }
 
     try {
-      // Try Chrome's i18n API
-      const chromeMessage = chrome.i18n.getMessage(key, substitutions);
-      if (chromeMessage) {
-        console.log(
-          `getMessage: Using Chrome i18n for '${key}': '${chromeMessage}'`
-        );
-        return chromeMessage;
+      // Use Chrome's i18n API as primary source
+      const message = chrome.i18n.getMessage(key, substitutions);
+      if (message) {
+        console.log(`getMessage: Using Chrome i18n for '${key}': '${message}'`);
+        return message;
       }
     } catch (error) {
       console.log(`getMessage: Chrome i18n failed for '${key}':`, error);
     }
 
-    // Fallback to our internal translations
-    const translation =
+    // Fallback to internal translations or key itself
+    const fallbackTranslation =
       this.translations[this.currentLocale]?.[key] ||
       this.translations[this.fallbackLocale]?.[key] ||
       key;
 
     console.log(
-      `getMessage: Fallback translation for '${key}': '${translation}'`
+      `getMessage: Fallback translation for '${key}': '${fallbackTranslation}'`
     );
-    return translation;
+    return fallbackTranslation;
   }
 
   /**

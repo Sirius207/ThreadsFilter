@@ -574,3 +574,11 @@ h3 {
 [lang="ja"] .stat-item {
   margin-bottom: 8px;
 }
+
+[lang="ja"] h1 {
+  font-size: 15px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
