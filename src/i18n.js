@@ -24,14 +24,14 @@ class I18n {
         direction: "ltr",
         fontFamily: "PingFang TC, Microsoft JhengHei, system-ui, sans-serif",
       },
+      ja: {
+        name: "Japanese",
+        nativeName: "日本語",
+        flag: "flag-jp",
+        direction: "ltr",
+        fontFamily: "Hiragino Sans, Yu Gothic, system-ui, sans-serif",
+      },
       // Easy to add more languages:
-      // ja: {
-      //   name: "Japanese",
-      //   nativeName: "日本語",
-      //   flag: "flag-jp",
-      //   direction: "ltr",
-      //   fontFamily: "Hiragino Sans, Yu Gothic, system-ui, sans-serif"
-      // },
       // ko: {
       //   name: "Korean",
       //   nativeName: "한국어",
@@ -117,6 +117,41 @@ class I18n {
         clickToShowDescription:
           "啟用後，已過濾的留言需要點擊才能顯示，而不是懸停",
         resetToDefaults: "重設為預設值",
+      },
+      ja: {
+        appName: "Threads コメントフィルター",
+        appDescription:
+          "フォロワー数とアバターの特徴に基づいてThreadsのコメントをフィルタリングし、柔軟な表示モードをサポート",
+        popupTitle: "Threads コメントフィルター",
+        filterSettings: "フィルター設定",
+        enableCommentFiltering: "コメントフィルタリングを有効にする",
+        showFollowerCounts: "フォロワー数を表示",
+        displayMode: "表示モード",
+        hideComments: "コメントを非表示",
+        grayscaleComments: "グレースケールコメント",
+        followerCountFilter: "フォロワー数フィルター",
+        minimumFollowers: "最小フォロワー数：",
+        avatarFilters: "アバターフィルター",
+        hideDefaultAvatars: "デフォルトアバターを非表示",
+        filterStatistics: "フィルター統計",
+        total: "合計：",
+        totalFiltered: "フィルター済み：",
+        byFollowerCount: "フォロワー数による：",
+        byDefaultAvatars: "デフォルトアバターによる：",
+        refreshStats: "統計を更新",
+        updating: "更新中...",
+        advancedSettings: "詳細設定",
+        grayscaleOpacity: "グレースケール透明度：",
+        grayscaleOpacityDescription:
+          "グレースケールモードでフィルターされたコメントの透明度を調整",
+        maximumFollowers: "最大フォロワー数：",
+        hideVerifiedAccounts: "認証済みアカウントを非表示",
+        enableDebugMode: "デバッグモードを有効にする",
+        debugModeDescription: "ブラウザコンソールに詳細ログを表示",
+        clickToShowFilteredComments: "フィルターされたコメントをクリックで表示",
+        clickToShowDescription:
+          "有効にすると、フィルターされたコメントはホバーではなくクリックで表示されます",
+        resetToDefaults: "デフォルトにリセット",
       },
     };
   }

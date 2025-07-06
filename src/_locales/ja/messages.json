@@ -1,0 +1,122 @@
+{
+  "appName": {
+    "message": "Threads コメントフィルター",
+    "description": "Extension name"
+  },
+  "appDescription": {
+    "message": "フォロワー数とアバターの特徴に基づいてThreadsのコメントをフィルタリングし、柔軟な表示モードをサポート",
+    "description": "Extension description"
+  },
+  "popupTitle": {
+    "message": "Threads コメントフィルター",
+    "description": "Popup title"
+  },
+  "filterSettings": {
+    "message": "フィルター設定",
+    "description": "Section header for filter settings"
+  },
+  "enableCommentFiltering": {
+    "message": "コメントフィルタリングを有効にする",
+    "description": "Toggle for enabling comment filtering"
+  },
+  "showFollowerCounts": {
+    "message": "フォロワー数を表示",
+    "description": "Toggle for showing follower counts"
+  },
+  "displayMode": {
+    "message": "表示モード",
+    "description": "Section header for display mode"
+  },
+  "hideComments": {
+    "message": "コメントを非表示",
+    "description": "Radio option for hiding comments"
+  },
+  "grayscaleComments": {
+    "message": "グレースケールコメント",
+    "description": "Radio option for grayscale comments"
+  },
+  "followerCountFilter": {
+    "message": "フォロワー数フィルター",
+    "description": "Section header for follower count filter"
+  },
+  "minimumFollowers": {
+    "message": "最小フォロワー数：",
+    "description": "Label for minimum followers input"
+  },
+  "avatarFilters": {
+    "message": "アバターフィルター",
+    "description": "Section header for avatar filters"
+  },
+  "hideDefaultAvatars": {
+    "message": "デフォルトアバターを非表示",
+    "description": "Toggle for hiding default avatars"
+  },
+  "filterStatistics": {
+    "message": "フィルター統計",
+    "description": "Section header for filter statistics"
+  },
+  "total": {
+    "message": "合計：",
+    "description": "Label for total count"
+  },
+  "totalFiltered": {
+    "message": "フィルター済み：",
+    "description": "Label for total filtered count"
+  },
+  "byFollowerCount": {
+    "message": "フォロワー数による：",
+    "description": "Label for follower count filtered"
+  },
+  "byDefaultAvatars": {
+    "message": "デフォルトアバターによる：",
+    "description": "Label for default avatar filtered"
+  },
+  "refreshStats": {
+    "message": "統計を更新",
+    "description": "Button text for refreshing statistics"
+  },
+  "updating": {
+    "message": "更新中...",
+    "description": "Text shown while updating"
+  },
+  "advancedSettings": {
+    "message": "詳細設定",
+    "description": "Section header for advanced settings"
+  },
+  "grayscaleOpacity": {
+    "message": "グレースケール透明度：",
+    "description": "Label for grayscale opacity slider"
+  },
+  "grayscaleOpacityDescription": {
+    "message": "グレースケールモードでフィルターされたコメントの透明度を調整",
+    "description": "Description for grayscale opacity setting"
+  },
+  "maximumFollowers": {
+    "message": "最大フォロワー数：",
+    "description": "Label for maximum followers input"
+  },
+  "hideVerifiedAccounts": {
+    "message": "認証済みアカウントを非表示",
+    "description": "Toggle for hiding verified accounts"
+  },
+  "enableDebugMode": {
+    "message": "デバッグモードを有効にする",
+    "description": "Toggle for enabling debug mode"
+  },
+  "debugModeDescription": {
+    "message": "ブラウザコンソールに詳細ログを表示",
+    "description": "Description for debug mode setting"
+  },
+  "clickToShowFilteredComments": {
+    "message": "フィルターされたコメントをクリックで表示",
+    "description": "Toggle for click to show filtered comments"
+  },
+  "clickToShowDescription": {
+    "message": "有効にすると、フィルターされたコメントはホバーではなくクリックで表示されます",
+    "description": "Description for click to show setting"
+  },
+  "resetToDefaults": {
+    "message": "デフォルトにリセット",
+    "description": "Button text for resetting to defaults"
+  }
+}

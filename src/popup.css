@@ -479,6 +479,10 @@ h3 {
   background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600"><path fill="%23EE1C25" d="M0 0h900v600H0z"/><path fill="%23000" d="M0 0h450v300H0z"/><path fill="%23fff" d="M67.5 37.5l22.5 67.5h67.5l-54.75 39.75 20.25 67.5L67.5 172.5l-54.75 39.75 20.25-67.5L-22.5 105h67.5z"/></svg>');
 }
 
+.flag-jp {
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600"><path fill="%23fff" d="M0 0h900v600H0z"/><circle cx="450" cy="300" r="180" fill="%23bc002d"/></svg>');
+}
+
 /* RTL Support */
 [dir="rtl"] .language-selector {
   justify-content: flex-start;
@@ -526,4 +530,47 @@ h3 {
 /* Hide the old language selector styles */
 .lang-select {
   display: none;
+}
+
+[lang="zh-TW"] .stat-item {
+  margin-bottom: 8px;
+}
+
+/* Japanese font support */
+[lang="ja"] body,
+[lang="ja"] h1,
+[lang="ja"] h3,
+[lang="ja"] label,
+[lang="ja"] span,
+[lang="ja"] button,
+[lang="ja"] input,
+[lang="ja"] select,
+[lang="ja"] textarea {
+  font-family:
+    "Hiragino Sans", "Yu Gothic", "Meiryo", "MS PGothic",
+    "Hiragino Kaku Gothic ProN", "Hiragino Kaku Gothic Pro", "Noto Sans CJK JP",
+    "Source Han Sans JP", "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI",
+    system-ui, sans-serif;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+[lang="ja"] .section {
+  margin-bottom: 18px;
+}
+
+[lang="ja"] .setting-group {
+  margin-bottom: 10px;
+}
+
+[lang="ja"] .input-group {
+  margin-bottom: 10px;
+}
+
+[lang="ja"] .stats-display {
+  margin-bottom: 12px;
+}
+
+[lang="ja"] .stat-item {
+  margin-bottom: 8px;
 }
