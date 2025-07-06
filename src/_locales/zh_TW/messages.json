@@ -1,0 +1,122 @@
+{
+  "appName": {
+    "message": "Threads 留言過濾器",
+    "description": "Extension name"
+  },
+  "appDescription": {
+    "message": "根據追蹤者數量和頭像特徵過濾 Threads 留言，支援靈活的顯示模式",
+    "description": "Extension description"
+  },
+  "popupTitle": {
+    "message": "Threads 留言過濾器",
+    "description": "Popup title"
+  },
+  "filterSettings": {
+    "message": "過濾設定",
+    "description": "Section header for filter settings"
+  },
+  "enableCommentFiltering": {
+    "message": "啟用留言過濾",
+    "description": "Toggle label for enabling comment filtering"
+  },
+  "showFollowerCounts": {
+    "message": "顯示追蹤者數量",
+    "description": "Toggle label for showing follower counts"
+  },
+  "displayMode": {
+    "message": "顯示模式",
+    "description": "Section header for display mode"
+  },
+  "hideComments": {
+    "message": "隱藏留言",
+    "description": "Radio button label for hiding comments"
+  },
+  "grayscaleComments": {
+    "message": "灰階留言",
+    "description": "Radio button label for grayscale comments"
+  },
+  "followerCountFilter": {
+    "message": "追蹤者數量過濾",
+    "description": "Section header for follower count filter"
+  },
+  "minimumFollowers": {
+    "message": "最低追蹤者：",
+    "description": "Label for minimum followers input"
+  },
+  "avatarFilters": {
+    "message": "頭像過濾",
+    "description": "Section header for avatar filters"
+  },
+  "hideDefaultAvatars": {
+    "message": "隱藏預設頭像的留言",
+    "description": "Toggle label for hiding default avatars"
+  },
+  "filterStatistics": {
+    "message": "過濾統計",
+    "description": "Section header for filter statistics"
+  },
+  "total": {
+    "message": "總計：",
+    "description": "Label for total count"
+  },
+  "totalFiltered": {
+    "message": "已過濾：",
+    "description": "Label for total filtered count"
+  },
+  "byFollowerCount": {
+    "message": "依追蹤者數量：",
+    "description": "Label for follower count filtered"
+  },
+  "byDefaultAvatars": {
+    "message": "依預設頭像：",
+    "description": "Label for avatar filtered count"
+  },
+  "refreshStats": {
+    "message": "重新整理統計",
+    "description": "Button text for refreshing statistics"
+  },
+  "updating": {
+    "message": "更新中...",
+    "description": "Text shown while updating stats"
+  },
+  "advancedSettings": {
+    "message": "進階設定",
+    "description": "Section header for advanced settings"
+  },
+  "grayscaleOpacity": {
+    "message": "灰階透明度：",
+    "description": "Label for grayscale opacity slider"
+  },
+  "grayscaleOpacityDescription": {
+    "message": "調整灰階模式下已過濾留言的透明度",
+    "description": "Description for grayscale opacity setting"
+  },
+  "maximumFollowers": {
+    "message": "最多追蹤者：",
+    "description": "Label for maximum followers input"
+  },
+  "hideVerifiedAccounts": {
+    "message": "隱藏認證帳戶",
+    "description": "Toggle label for hiding verified accounts"
+  },
+  "enableDebugMode": {
+    "message": "啟用除錯模式",
+    "description": "Toggle label for debug mode"
+  },
+  "debugModeDescription": {
+    "message": "在瀏覽器控制台中顯示詳細日誌",
+    "description": "Description for debug mode setting"
+  },
+  "clickToShowFilteredComments": {
+    "message": "點擊顯示已過濾留言",
+    "description": "Toggle label for click to show feature"
+  },
+  "clickToShowDescription": {
+    "message": "啟用後，已過濾的留言需要點擊才能顯示，而不是滑鼠懸停",
+    "description": "Description for click to show setting"
+  },
+  "resetToDefaults": {
+    "message": "重設為預設值",
+    "description": "Button text for resetting settings"
+  }
+}

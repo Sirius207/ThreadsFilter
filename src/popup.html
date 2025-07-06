@@ -9,17 +9,19 @@
   <body>
     <div class="container">
       <header>
-        <h1>Threads Comment Filter</h1>
+        <h1 data-i18n="popupTitle">Threads Comment Filter</h1>
       </header>
 
       <div class="section">
-        <h3>Filter Settings</h3>
+        <h3 data-i18n="filterSettings">Filter Settings</h3>
 
         <div class="setting-group">
           <label class="toggle-label">
             <input type="checkbox" id="enableFilter" />
             <span class="toggle-slider"></span>
-            Enable Comment Filtering
+            <span data-i18n="enableCommentFiltering"
+              >Enable Comment Filtering</span
+            >
           </label>
         </div>
 
@@ -27,18 +29,18 @@
           <label class="toggle-label">
             <input type="checkbox" id="showFollowerCount" />
             <span class="toggle-slider"></span>
-            Show Follower Counts
+            <span data-i18n="showFollowerCounts">Show Follower Counts</span>
           </label>
         </div>
       </div>
 
       <div class="section">
-        <h3>Display Mode</h3>
+        <h3 data-i18n="displayMode">Display Mode</h3>
         <div class="radio-group">
           <label class="radio-label">
             <input type="radio" name="displayMode" value="hide" id="hideMode" />
             <span class="radio-custom"></span>
-            Hide Comments
+            <span data-i18n="hideComments">Hide Comments</span>
           </label>
           <label class="radio-label">
             <input
@@ -48,49 +50,57 @@
               id="grayscaleMode"
             />
             <span class="radio-custom"></span>
-            Grayscale Comments
+            <span data-i18n="grayscaleComments">Grayscale Comments</span>
           </label>
         </div>
       </div>
 
       <div class="section">
-        <h3>Follower Count Filter</h3>
+        <h3 data-i18n="followerCountFilter">Follower Count Filter</h3>
 
         <div class="input-group">
-          <label for="minFollowers">Minimum Followers:</label>
+          <label for="minFollowers" data-i18n="minimumFollowers"
+            >Minimum Followers:</label
+          >
           <input type="number" id="minFollowers" min="0" placeholder="20" />
         </div>
       </div>
 
       <div class="section">
-        <h3>Avatar Filters</h3>
+        <h3 data-i18n="avatarFilters">Avatar Filters</h3>
 
         <div class="setting-group">
           <label class="toggle-label">
             <input type="checkbox" id="hideDefaultAvatars" />
             <span class="toggle-slider"></span>
-            Hide Default Avatars
+            <span data-i18n="hideDefaultAvatars">Hide Default Avatars</span>
           </label>
         </div>
       </div>
 
       <div class="section">
-        <h3>Filter Statistics</h3>
+        <h3 data-i18n="filterStatistics">Filter Statistics</h3>
         <div class="stats-display">
           <div class="stat-item">
-            <span class="stat-label">Total:</span>
+            <span class="stat-label" data-i18n="total">Total:</span>
             <span class="stat-value" id="totalCount">0</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">Total Filtered:</span>
+            <span class="stat-label" data-i18n="totalFiltered"
+              >Total Filtered:</span
+            >
             <span class="stat-value" id="filteredCount">0</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">By Follower Count:</span>
+            <span class="stat-label" data-i18n="byFollowerCount"
+              >By Follower Count:</span
+            >
             <span class="stat-value" id="followerFilteredCount">0</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">By Default Avatars:</span>
+            <span class="stat-label" data-i18n="byDefaultAvatars"
+              >By Default Avatars:</span
+            >
             <span class="stat-value" id="avatarFilteredCount">0</span>
           </div>
         </div>
@@ -98,6 +108,7 @@
           id="refreshStats"
           class="btn-secondary"
           style="margin-top: 8px; width: 100%"
+          data-i18n="refreshStats"
         >
           Refresh Stats
         </button>
@@ -105,7 +116,7 @@
 
       <div class="section">
         <div class="advanced-header" id="advancedToggle">
-          <h3>Advanced Settings</h3>
+          <h3 data-i18n="advancedSettings">Advanced Settings</h3>
           <span class="expand-icon" id="expandIcon">▼</span>
         </div>
         <div
@@ -114,9 +125,10 @@
           style="display: none"
         >
           <div class="input-group">
-            <label for="grayscaleOpacity"
-              >Grayscale Opacity: <span id="opacityValue">0.3</span></label
-            >
+            <label for="grayscaleOpacity">
+              <span data-i18n="grayscaleOpacity">Grayscale Opacity:</span>
+              <span id="opacityValue">0.3</span>
+            </label>
             <input
               type="range"
               id="grayscaleOpacity"
@@ -125,13 +137,18 @@
               step="0.1"
               value="0.3"
             />
-            <p class="setting-description">
+            <p
+              class="setting-description"
+              data-i18n="grayscaleOpacityDescription"
+            >
               Adjust the opacity of filtered comments in grayscale mode
             </p>
           </div>
 
           <div class="input-group">
-            <label for="maxFollowers">Maximum Followers:</label>
+            <label for="maxFollowers" data-i18n="maximumFollowers"
+              >Maximum Followers:</label
+            >
             <input type="number" id="maxFollowers" min="0" placeholder="∞" />
           </div>
 
@@ -139,7 +156,9 @@
             <label class="toggle-label">
               <input type="checkbox" id="hideVerified" />
               <span class="toggle-slider"></span>
-              Hide Verified Accounts
+              <span data-i18n="hideVerifiedAccounts"
+                >Hide Verified Accounts</span
+              >
             </label>
           </div>
 
@@ -147,9 +166,9 @@
             <label class="toggle-label">
               <input type="checkbox" id="debugMode" />
               <span class="toggle-slider"></span>
-              Enable Debug Mode
+              <span data-i18n="enableDebugMode">Enable Debug Mode</span>
             </label>
-            <p class="setting-description">
+            <p class="setting-description" data-i18n="debugModeDescription">
               Show detailed logs in browser console
             </p>
           </div>
@@ -158,9 +177,11 @@
             <label class="toggle-label">
               <input type="checkbox" id="clickToShow" />
               <span class="toggle-slider"></span>
-              Click to Show Filtered Comments
+              <span data-i18n="clickToShowFilteredComments"
+                >Click to Show Filtered Comments</span
+              >
             </label>
-            <p class="setting-description">
+            <p class="setting-description" data-i18n="clickToShowDescription">
               When enabled, filtered comments require a click to show instead of
               hover
             </p>
@@ -169,10 +190,17 @@
       </div>
 
       <div class="section">
-        <button id="resetSettings" class="btn-danger">Reset to Defaults</button>
+        <button
+          id="resetSettings"
+          class="btn-danger"
+          data-i18n="resetToDefaults"
+        >
+          Reset to Defaults
+        </button>
       </div>
     </div>
 
+    <script src="i18n.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

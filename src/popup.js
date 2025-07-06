@@ -25,6 +25,9 @@ class PopupController {
   }
 
   async init() {
+    // Initialize i18n first and wait for it to complete
+    await window.i18n.init();
+
     await this.loadSettings();
     this.bindEvents();
     this.updateUI();
@@ -279,7 +282,7 @@ class PopupController {
     try {
       const refreshBtn = document.getElementById("refreshStats");
       if (refreshBtn) {
-        refreshBtn.textContent = "Updating...";
+        refreshBtn.textContent = window.i18n.getMessage("updating");
         refreshBtn.disabled = true;
       }
 
@@ -318,7 +321,7 @@ class PopupController {
     } finally {
       const refreshBtn = document.getElementById("refreshStats");
       if (refreshBtn) {
-        refreshBtn.textContent = "Refresh Stats";
+        refreshBtn.textContent = window.i18n.getMessage("refreshStats");
         refreshBtn.disabled = false;
       }
     }
