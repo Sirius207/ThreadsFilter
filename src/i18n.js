@@ -1,12 +1,53 @@
 /**
  * Internationalization utility for the Threads Comment Filter extension
- * Supports English and Traditional Chinese
+ * Supports multiple languages with flexible configuration
  */
 
 class I18n {
   constructor() {
     this.currentLocale = "en"; // Default to English
     this.fallbackLocale = "en";
+
+    // Language configuration - easy to extend for new languages
+    this.languageConfig = {
+      en: {
+        name: "English",
+        nativeName: "English",
+        flag: "flag-en",
+        direction: "ltr",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+      },
+      zh_TW: {
+        name: "Traditional Chinese",
+        nativeName: "繁體中文",
+        flag: "flag-zh",
+        direction: "ltr",
+        fontFamily: "PingFang TC, Microsoft JhengHei, system-ui, sans-serif",
+      },
+      // Easy to add more languages:
+      // ja: {
+      //   name: "Japanese",
+      //   nativeName: "日本語",
+      //   flag: "flag-jp",
+      //   direction: "ltr",
+      //   fontFamily: "Hiragino Sans, Yu Gothic, system-ui, sans-serif"
+      // },
+      // ko: {
+      //   name: "Korean",
+      //   nativeName: "한국어",
+      //   flag: "flag-kr",
+      //   direction: "ltr",
+      //   fontFamily: "Apple SD Gothic Neo, Malgun Gothic, system-ui, sans-serif"
+      // },
+      // fr: {
+      //   name: "French",
+      //   nativeName: "Français",
+      //   flag: "flag-fr",
+      //   direction: "ltr",
+      //   fontFamily: "system-ui, -apple-system, sans-serif"
+      // }
+    };
+
     this.translations = {
       en: {
         appName: "Threads Comment Filter",
@@ -133,11 +174,42 @@ class I18n {
   }
 
   /**
-   * Check if the current locale is Chinese
-   * @returns {boolean} True if the locale is Chinese
+   * Get language configuration for the current locale
+   * @returns {Object} Language configuration object
    */
-  isChinese() {
-    return this.currentLocale === "zh_TW";
+  getLanguageConfig() {
+    return (
+      this.languageConfig[this.currentLocale] ||
+      this.languageConfig[this.fallbackLocale]
+    );
+  }
+
+  /**
+   * Check if the current locale uses a specific script or family
+   * @param {string} script - Script family to check ('latin', 'cjk', 'arabic', etc.)
+   * @returns {boolean} True if the locale uses the specified script
+   */
+  usesScript(script) {
+    const scriptMap = {
+      latin: ["en", "fr", "es", "de", "it", "pt"],
+      cjk: ["zh_TW", "zh_CN", "ja", "ko"],
+      arabic: ["ar", "fa", "ur"],
+      cyrillic: ["ru", "uk", "bg"],
+    };
+
+    return scriptMap[script]?.includes(this.currentLocale) || false;
+  }
+
+  /**
+   * Check if the current locale needs special font handling
+   * @returns {boolean} True if the locale needs special fonts
+   */
+  needsSpecialFonts() {
+    return (
+      this.usesScript("cjk") ||
+      this.usesScript("arabic") ||
+      this.usesScript("cyrillic")
+    );
   }
 
   /**
@@ -145,8 +217,23 @@ class I18n {
    * @returns {string} 'ltr' or 'rtl'
    */
   getDirection() {
-    // Chinese and English are both LTR
-    return "ltr";
+    return this.getLanguageConfig().direction || "ltr";
+  }
+
+  /**
+   * Get the font family for the current locale
+   * @returns {string} CSS font-family string
+   */
+  getFontFamily() {
+    return this.getLanguageConfig().fontFamily || "system-ui, sans-serif";
+  }
+
+  /**
+   * Get all available languages
+   * @returns {Object} Object with locale codes as keys and language info as values
+   */
+  getAvailableLanguages() {
+    return this.languageConfig;
   }
 
   /**
@@ -195,6 +282,9 @@ class I18n {
     document.documentElement.setAttribute("dir", this.getDirection());
     document.documentElement.setAttribute("lang", this.currentLocale);
 
+    // Apply font family for the current locale
+    this.applyFontFamily();
+
     // Apply translations
     this.applyTranslations();
 
@@ -202,6 +292,17 @@ class I18n {
     this.addLanguageSelector();
 
     console.log("i18n system initialized successfully");
+  }
+
+  /**
+   * Apply font family based on current locale
+   */
+  applyFontFamily() {
+    const fontFamily = this.getFontFamily();
+    if (fontFamily) {
+      document.body.style.fontFamily = fontFamily;
+      console.log(`Applied font family: ${fontFamily}`);
+    }
   }
 
   /**
@@ -229,19 +330,23 @@ class I18n {
       </svg>
     `;
 
-    // Create dropdown menu
+    // Create dropdown menu using language configuration
     const dropdown = document.createElement("div");
     dropdown.className = "language-dropdown";
-    dropdown.innerHTML = `
-      <div class="language-option ${this.currentLocale === "en" ? "selected" : ""}" data-lang="en">
-        <div class="language-flag flag-en"></div>
-        <span>English</span>
-      </div>
-      <div class="language-option ${this.currentLocale === "zh_TW" ? "selected" : ""}" data-lang="zh_TW">
-        <div class="language-flag flag-zh"></div>
-        <span>繁體中文</span>
-      </div>
-    `;
+
+    // Generate language options dynamically from configuration
+    const languageOptions = Object.entries(this.languageConfig)
+      .map(
+        ([locale, config]) => `
+        <div class="language-option ${this.currentLocale === locale ? "selected" : ""}" data-lang="${locale}">
+          <div class="language-flag ${config.flag}"></div>
+          <span>${config.nativeName}</span>
+        </div>
+      `
+      )
+      .join("");
+
+    dropdown.innerHTML = languageOptions;
 
     // Add click event to globe icon
     globeIcon.addEventListener("click", (e) => {
@@ -302,6 +407,9 @@ class I18n {
     // Update document attributes
     document.documentElement.setAttribute("lang", this.currentLocale);
 
+    // Apply font family for the new locale
+    this.applyFontFamily();
+
     // Re-apply translations
     this.applyTranslations();
 
@@ -343,21 +451,48 @@ class I18n {
         this.currentLocale = result.threadsFilterLanguage;
         console.log(`Loaded saved language preference: ${this.currentLocale}`);
       } else {
-        // Try to detect browser language
+        // Try to detect browser language using available languages
         const browserLang = chrome.i18n.getUILanguage();
-        if (browserLang && browserLang.startsWith("zh")) {
-          this.currentLocale = "zh_TW";
-        } else {
-          this.currentLocale = "en";
-        }
+        this.currentLocale = this.detectBestLanguage(browserLang);
         console.log(
-          `No saved language preference, using detected: ${this.currentLocale}`
+          `No saved language preference, using detected: ${this.currentLocale} (from browser: ${browserLang})`
         );
       }
     } catch (error) {
       console.warn("Failed to load language preference:", error);
-      this.currentLocale = "en";
+      this.currentLocale = this.fallbackLocale;
     }
+  }
+
+  /**
+   * Detect the best available language based on browser language
+   * @param {string} browserLang - Browser language code
+   * @returns {string} Best matching locale code
+   */
+  detectBestLanguage(browserLang) {
+    if (!browserLang) return this.fallbackLocale;
+
+    const availableLocales = Object.keys(this.languageConfig);
+
+    // Direct match
+    if (availableLocales.includes(browserLang)) {
+      return browserLang;
+    }
+
+    // Language code match (e.g., 'zh' matches 'zh_TW')
+    const languageCode = browserLang.split("_")[0];
+    for (const locale of availableLocales) {
+      if (locale.startsWith(languageCode)) {
+        return locale;
+      }
+    }
+
+    // Script-based fallback
+    if (languageCode === "zh") {
+      return "zh_TW"; // Default to Traditional Chinese for Chinese browsers
+    }
+
+    return this.fallbackLocale;
   }
 }
 
