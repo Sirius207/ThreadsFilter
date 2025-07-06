@@ -1,0 +1,122 @@
+{
+  "appName": {
+    "message": "Threads Comment Filter",
+    "description": "Extension name"
+  },
+  "appDescription": {
+    "message": "Filter Threads comments by follower count and avatar characteristics with flexible display modes",
+    "description": "Extension description"
+  },
+  "popupTitle": {
+    "message": "Threads Comment Filter",
+    "description": "Popup title"
+  },
+  "filterSettings": {
+    "message": "Filter Settings",
+    "description": "Section header for filter settings"
+  },
+  "enableCommentFiltering": {
+    "message": "Enable Comment Filtering",
+    "description": "Toggle label for enabling comment filtering"
+  },
+  "showFollowerCounts": {
+    "message": "Show Follower Counts",
+    "description": "Toggle label for showing follower counts"
+  },
+  "displayMode": {
+    "message": "Display Mode",
+    "description": "Section header for display mode"
+  },
+  "hideComments": {
+    "message": "Hide Comments",
+    "description": "Radio button label for hiding comments"
+  },
+  "grayscaleComments": {
+    "message": "Grayscale Comments",
+    "description": "Radio button label for grayscale comments"
+  },
+  "followerCountFilter": {
+    "message": "Follower Count Filter",
+    "description": "Section header for follower count filter"
+  },
+  "minimumFollowers": {
+    "message": "Minimum Followers:",
+    "description": "Label for minimum followers input"
+  },
+  "avatarFilters": {
+    "message": "Avatar Filters",
+    "description": "Section header for avatar filters"
+  },
+  "hideDefaultAvatars": {
+    "message": "Hide Default Avatars",
+    "description": "Toggle label for hiding default avatars"
+  },
+  "filterStatistics": {
+    "message": "Filter Statistics",
+    "description": "Section header for filter statistics"
+  },
+  "total": {
+    "message": "Total:",
+    "description": "Label for total count"
+  },
+  "totalFiltered": {
+    "message": "Total Filtered:",
+    "description": "Label for total filtered count"
+  },
+  "byFollowerCount": {
+    "message": "By Follower Count:",
+    "description": "Label for follower count filtered"
+  },
+  "byDefaultAvatars": {
+    "message": "By Default Avatars:",
+    "description": "Label for avatar filtered count"
+  },
+  "refreshStats": {
+    "message": "Refresh Stats",
+    "description": "Button text for refreshing statistics"
+  },
+  "updating": {
+    "message": "Updating...",
+    "description": "Text shown while updating stats"
+  },
+  "advancedSettings": {
+    "message": "Advanced Settings",
+    "description": "Section header for advanced settings"
+  },
+  "grayscaleOpacity": {
+    "message": "Grayscale Opacity:",
+    "description": "Label for grayscale opacity slider"
+  },
+  "grayscaleOpacityDescription": {
+    "message": "Adjust the opacity of filtered comments in grayscale mode",
+    "description": "Description for grayscale opacity setting"
+  },
+  "maximumFollowers": {
+    "message": "Maximum Followers:",
+    "description": "Label for maximum followers input"
+  },
+  "hideVerifiedAccounts": {
+    "message": "Hide Verified Accounts",
+    "description": "Toggle label for hiding verified accounts"
+  },
+  "enableDebugMode": {
+    "message": "Enable Debug Mode",
+    "description": "Toggle label for debug mode"
+  },
+  "debugModeDescription": {
+    "message": "Show detailed logs in browser console",
+    "description": "Description for debug mode setting"
+  },
+  "clickToShowFilteredComments": {
+    "message": "Click to Show Filtered Comments",
+    "description": "Toggle label for click to show feature"
+  },
+  "clickToShowDescription": {
+    "message": "When enabled, filtered comments require a click to show instead of hover",
+    "description": "Description for click to show setting"
+  },
+  "resetToDefaults": {
+    "message": "Reset to Defaults",
+    "description": "Button text for resetting settings"
+  }
+}
