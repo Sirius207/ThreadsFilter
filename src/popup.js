@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS = {
   hideDefaultAvatars: true,
   debug: false,
   grayscaleOpacity: 0.3,
+  clickToShow: false,
 };
 
 class PopupController {
@@ -151,6 +152,12 @@ class PopupController {
       this.saveSettings();
     });
 
+    // Click to show toggle
+    document.getElementById("clickToShow").addEventListener("change", (e) => {
+      this.settings.clickToShow = e.target.checked;
+      this.saveSettings();
+    });
+
     // Grayscale opacity slider
     const opacitySlider = document.getElementById("grayscaleOpacity");
     const opacityValue = document.getElementById("opacityValue");
@@ -238,6 +245,9 @@ class PopupController {
 
     // Update debug mode
     document.getElementById("debugMode").checked = this.settings.debug;
+
+    // Update click to show setting
+    document.getElementById("clickToShow").checked = this.settings.clickToShow;
 
     // Update grayscale opacity slider
     const opacitySlider = document.getElementById("grayscaleOpacity");
