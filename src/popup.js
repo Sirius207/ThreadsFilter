@@ -8,8 +8,9 @@ const DEFAULT_SETTINGS = {
   hideVerified: false,
   hideDefaultAvatars: true,
   debug: false,
-  grayscaleOpacity: 0.3,
+  grayscaleOpacity: 0.1,
   clickToShow: false,
+  hideAnimation: false,
 };
 
 class PopupController {
@@ -161,6 +162,12 @@ class PopupController {
       this.saveSettings();
     });
 
+    // Hide animation toggle
+    document.getElementById("hideAnimation").addEventListener("change", (e) => {
+      this.settings.hideAnimation = e.target.checked;
+      this.saveSettings();
+    });
+
     // Grayscale opacity slider
     const opacitySlider = document.getElementById("grayscaleOpacity");
     const opacityValue = document.getElementById("opacityValue");
@@ -251,6 +258,10 @@ class PopupController {
 
     // Update click to show setting
     document.getElementById("clickToShow").checked = this.settings.clickToShow;
+
+    // Update hide animation setting
+    document.getElementById("hideAnimation").checked =
+      this.settings.hideAnimation;
 
     // Update grayscale opacity slider
     const opacitySlider = document.getElementById("grayscaleOpacity");

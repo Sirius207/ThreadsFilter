@@ -115,6 +115,14 @@
     "message": "有効にすると、フィルターされたコメントはホバーではなくクリックで表示されます",
     "description": "Description for click to show setting"
   },
+  "hideAnimation": {
+    "message": "非表示アニメーション (Beta)",
+    "description": "Toggle label for hide animation setting"
+  },
+  "hideAnimationDescription": {
+    "message": "有効にすると、非表示のコメントはフェードアウトアニメーションを使用；無効にすると即座に消えます",
+    "description": "Description for hide animation setting"
+  },
   "resetToDefaults": {
     "message": "デフォルトにリセット",
     "description": "Button text for resetting to defaults"

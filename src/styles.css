@@ -29,6 +29,25 @@
   opacity: 0.8;
 }
 
+/* Hidden comments with smooth animation */
+.threads-filter-hidden {
+  overflow: hidden;
+  transition: all 0.5s ease-in-out;
+  opacity: 1;
+  max-height: 1000px; /* Large enough to accommodate most comments */
+  margin: 8px 0;
+  padding: 8px 0;
+}
+
+/* Hidden state - animate to zero height and opacity */
+.threads-filter-hidden.hiding {
+  opacity: 0;
+  max-height: 0;
+  margin: 0;
+  padding: 0;
+  transform: translateY(-10px);
+}
+
 /* Follower count styling */
 .threads-follower-count {
   color: #65676b !important;
@@ -36,19 +55,6 @@
   font-weight: normal !important;
   margin-left: 4px !important;
   display: inline !important;
-}
-
-/* Hidden comments indicator */
-.threads-filter-hidden::before {
-  content: "Comment hidden by filter";
-  display: block;
-  padding: 8px 12px;
-  background: #f0f2f5;
-  color: #65676b;
-  font-size: 12px;
-  border-radius: 6px;
-  margin: 4px 0;
-  border: 1px solid #e4e6ea;
 }
 
 /* Enhanced styling for filtered comments in grayscale mode */
@@ -110,7 +116,8 @@
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   .threads-filter-grayscale,
-  [data-threads-filter-data] {
+  [data-threads-filter-data],
+  .threads-filter-hidden {
     transition: none;
   }
 }
@@ -119,12 +126,6 @@
 @media (prefers-color-scheme: dark) {
   .threads-follower-count {
     color: #b0b3b8 !important;
-  }
-
-  .threads-filter-hidden::before {
-    background: #3a3b3c;
-    color: #b0b3b8;
-    border-color: #4e4f50;
   }
 
   .threads-filter-grayscale {

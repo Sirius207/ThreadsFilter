@@ -82,6 +82,9 @@ class I18n {
         clickToShowDescription:
           "When enabled, filtered comments require a click to show instead of hover",
         resetToDefaults: "Reset to Defaults",
+        hideAnimation: "Hide Animation",
+        hideAnimationDescription:
+          "When enabled, hidden comments use a fade-out animation; when disabled, they disappear instantly",
       },
       zh_TW: {
         popupTitle: "Threads 留言過濾器",
@@ -113,6 +116,9 @@ class I18n {
         clickToShowDescription:
           "啟用後，已過濾的留言需要點擊才能顯示，而不是懸停",
         resetToDefaults: "重設為預設值",
+        hideAnimation: "隱藏動畫",
+        hideAnimationDescription:
+          "啟用時，隱藏的留言會使用漸進消失動畫；停用時會直接消失",
       },
       ja: {
         popupTitle: "Threads コメントフィルター",
@@ -145,6 +151,9 @@ class I18n {
         clickToShowDescription:
           "有効にすると、フィルターされたコメントはホバーではなくクリックで表示されます",
         resetToDefaults: "デフォルトにリセット",
+        hideAnimation: "非表示アニメーション",
+        hideAnimationDescription:
+          "有効にすると、非表示のコメントはフェードアウトアニメーションを使用；無効にすると即座に消えます",
       },
     };
   }
