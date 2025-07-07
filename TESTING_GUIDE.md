@@ -1,211 +1,277 @@
-# Threads Comment Filter Extension - Testing Guide
+# Testing Guide for Threads Comment Filter Extension
 
-This guide explains how to test and debug the Threads Comment Filter extension using the built-in test functions.
+## Quick Start
 
-## Prerequisites
+### 1. Load the Extension
 
-1. **Extension Installed**: Make sure the Threads Comment Filter extension is installed and enabled in your browser
-2. **Threads.com Access**: Open [Threads.com](https://www.threads.com) in your browser
-3. **Developer Tools**: Know how to open browser developer tools (F12 or right-click → Inspect)
+1. Install the extension in Chrome
+2. Navigate to a Threads page (e.g., https://www.threads.com)
+3. Wait for the page to fully load
 
-## How to Run Tests
+### 2. Open Browser Console
 
-### Method 1: Using Browser Console (Recommended)
+- **Chrome**: Press `F12` or `Ctrl+Shift+I` (Windows/Linux) or `Cmd+Option+I` (Mac)
+- **Firefox**: Press `F12` or `Ctrl+Shift+K` (Windows/Linux) or `Cmd+Option+K` (Mac)
 
-1. **Open Threads.com** in your browser
-2. **Open Developer Tools** (F12 or right-click → Inspect)
-3. **Go to the Console tab**
-4. **Run the test functions** by calling them directly in the console
+### 3. Run Quick Tests
 
-### Method 2: Using Extension Debug Mode
+#### Check Extension Status (Recommended First Step)
 
-Enable debug mode in the extension settings to see more detailed logging. The test functions will output their results to the console when debug mode is enabled.
+```javascript
+simpleTest();
+```
+
+This will check if you're on the right page and if the extension is loaded.
+
+#### Check Extension Details
+
+```javascript
+checkExtension();
+```
+
+This will show you detailed information about what's available.
+
+#### Run Full Tests (if extension is loaded)
+
+```javascript
+quickTest();
+```
+
+This will test all the internationalization and spacing functionality.
+
+#### Test Internationalization Immediately
+
+```javascript
+testI18nNow();
+```
+
+This will test internationalization functionality even if the extension isn't fully loaded yet.
 
 ## Available Test Functions
 
-### 1. Avatar Detection Tests
-
-#### `testAvatarDetection()`
-Tests the avatar detection logic with known default and regular avatar URLs.
-
-**What it tests:**
-- Detection of default/anonymous profile pictures
-- Recognition of regular user avatars
-- URL pattern matching for Instagram's default avatar indicators
-
-**Example output:**
-```javascript
-testAvatarDetection()
-// Outputs detailed analysis of avatar URLs and detection results
-```
-
-### 2. Follower Count Functionality Tests
-
-#### `testFollowerCountFeature()`
-Tests the follower count parsing and formatting functions.
-
-**What it tests:**
-- Parsing follower counts from various formats (34, 1.2K, 500K, 1.5M, 2.3B)
-- Formatting follower counts for display
-- Edge cases and number conversions
-
-**Example output:**
-```javascript
-testFollowerCountFeature()
-// Tests parseFollowerCount and formatFollowerCount functions
-// Shows expected vs actual results for each test case
-```
-
-#### `testFetchFollowerCount(username)`
-Tests fetching follower count from a user's profile page.
-
-**Parameters:**
-- `username` (string): The username to fetch follower count for (without @ symbol)
-
-**What it tests:**
-- HTTP requests to user profile pages
-- HTML parsing for follower count extraction
-- Caching mechanism for follower counts
-
-**Example usage:**
-```javascript
-testFetchFollowerCount("example_user")
-// Attempts to fetch follower count for @example_user
-```
-
-### 3. Display and Visibility Tests
-
-#### `testFollowerCountVisibility()`
-Tests the visibility toggle for follower count displays.
-
-**What it tests:**
-- Current visibility state of follower count elements
-- Toggle functionality between show/hide states
-- CSS property changes for visibility control
-
-**Example output:**
-```javascript
-testFollowerCountVisibility()
-// Shows current state and tests toggle functionality
-```
-
-#### `testToggleFollowerCount()`
-Manually toggles follower count display and re-processes comments.
-
-**What it tests:**
-- Manual toggle of the `showFollowerCount` setting
-- Re-processing of all comments to update displays
-- Persistence of visibility changes
-
-**Example usage:**
-```javascript
-testToggleFollowerCount()
-// Toggles follower count visibility and updates all comments
-```
-
-#### `testHideOnlyFollowers()`
-Specifically tests hiding only the follower count text while preserving other elements.
-
-**What it tests:**
-- Selective hiding of follower count elements
-- Preservation of time elements and other content
-- CSS specificity and element targeting
-
-**Example output:**
-```javascript
-testHideOnlyFollowers()
-// Tests hiding followers while keeping time elements visible
-```
-
-### 4. Debug and Diagnostic Tests
-
-#### `debugFollowerCountElements()`
-Shows detailed information about follower count elements on the page.
-
-**What it shows:**
-- Count of follower count elements with specific class
-- Current CSS properties (display, visibility, opacity)
-- Time elements to verify they're not affected
-- Current extension settings
-
-**Example output:**
-```javascript
-debugFollowerCountElements()
-// Provides comprehensive debug information about elements
-```
-
-## Complete Testing Workflow
-
-Here's a recommended sequence for comprehensive testing:
+### Basic Tests
 
 ```javascript
-// 1. Test core functionality
-testAvatarDetection()
-testFollowerCountFeature()
+// Simple test - works immediately, doesn't require extension to be loaded
+simpleTest();
 
-// 2. Test with real data (replace with actual username)
-testFetchFollowerCount("real_username")
+// Check extension status - shows what's available
+checkExtension();
 
-// 3. Test display functionality
-testFollowerCountVisibility()
-testToggleFollowerCount()
+// Test internationalization immediately - works without extension
+testI18nNow();
 
-// 4. Test specific scenarios
-testHideOnlyFollowers()
+// Quick test - checks if extension is working (requires extension to be loaded)
+quickTest();
 
-// 5. Debug current state
-debugFollowerCountElements()
+// Status check - shows available functions (requires extension to be loaded)
+testExtensionStatus();
 ```
 
-## Understanding Test Output
+### Internationalization Tests
 
-### Avatar Detection Results
-- **Expected Results**: Default avatars should return `true`, regular avatars should return `false`
-- **Key Indicators**: Look for specific file IDs and cache keys that indicate default avatars
+```javascript
+// Test follower count translations
+testInternationalization();
 
-### Follower Count Results
-- **Parsing Tests**: Should show ✅ for passed tests, ❌ for failed tests
-- **Format Tests**: Verify numbers are formatted correctly (e.g., 1200 → "1.2K")
+// Test spacing between numbers and text
+testFollowerSpacing();
+```
 
-### Visibility Tests
-- **Display Property**: Should show `"none"` when hidden, `""` or `"inline"` when visible
-- **Element Count**: Verify the correct number of elements are being targeted
+### Follower Count Tests
+
+```javascript
+// Test follower count functionality
+testFollowerCountFeature();
+
+// Test follower count visibility toggle
+testFollowerCountVisibility();
+
+// Test manual toggle
+testToggleFollowerCount();
+
+// Debug follower count elements
+debugFollowerCountElements();
+
+// Test hiding only followers
+testHideOnlyFollowers();
+```
+
+### Avatar Tests
+
+```javascript
+// Test avatar detection
+testAvatarDetection();
+```
+
+### Fetch Tests
+
+```javascript
+// Test fetching follower count for a specific user
+testFetchFollowerCount("username");
+```
+
+## Expected Results
+
+### Quick Test Results
+
+```
+=== Quick Test ===
+✅ Extension loaded successfully
+✅ Internationalization test: followers (or 位粉絲, フォロワー, etc.)
+✅ Spacing test: " " (for English) or "" (for Chinese/Japanese)
+✅ Complete display test: • 7.1K followers (or appropriate format)
+=== End Quick Test ===
+```
+
+### Internationalization Test Results
+
+```
+=== Testing Internationalization ===
+Language en: { expected: "followers", result: "followers", passed: "✅" }
+Language zh_TW: { expected: "位粉絲", result: "位粉絲", passed: "✅" }
+Language ja: { expected: "フォロワー", result: "フォロワー", passed: "✅" }
+=== End Internationalization Test ===
+```
+
+### Spacing Test Results
+
+```
+=== Testing Follower Spacing ===
+Language en: { expected: " ", result: " ", passed: "✅" }
+Language zh_TW: { expected: "", result: "", passed: "✅" }
+Language ja: { expected: "", result: "", passed: "✅" }
+=== End Spacing Test ===
+```
 
 ## Troubleshooting
 
-### Common Issues
+### "testInternationalization is not defined" Error
 
-1. **Tests not found**: Make sure the extension is loaded and you're on Threads.com
-2. **No output**: Check if debug mode is enabled in extension settings
-3. **Errors**: Look for network errors or missing elements in the console
+**Problem**: The test function is not available.
 
-### Debug Mode
+**Solutions**:
 
-Enable debug mode in the extension popup to see detailed logging:
-1. Click the extension icon
-2. Enable "Debug Mode" in settings
-3. Refresh the page
-4. Run tests again
+1. **Use simple test first**: Run `simpleTest()` to check basic status
+2. **Check extension details**: Run `checkExtension()` to see what's available
+3. **Wait for extension to load**: The extension needs time to initialize
+4. **Use quick test**: Run `quickTest()` to check if extension is ready
+5. **Reload page**: If extension isn't loaded, try refreshing the page
+6. **Check console**: Look for any error messages in the browser console
 
-## Test Data
+### Extension Not Loading
 
-The tests use various sample data:
-- **Avatar URLs**: Known default and regular avatar URLs from Instagram/Threads
-- **Follower Counts**: Sample numbers in various formats (34, 1.2K, 500K, etc.)
-- **Usernames**: Test usernames for profile fetching
+**Problem**: The extension doesn't seem to be working.
+
+**Solutions**:
+
+1. **Check extension is enabled**: Go to `chrome://extensions/` and ensure the extension is enabled
+2. **Check permissions**: Make sure the extension has permission to access Threads
+3. **Reload extension**: Click the reload button in `chrome://extensions/`
+4. **Check for errors**: Look for error messages in the extension's console
+
+### No Follower Counts Showing
+
+**Problem**: Follower counts are not displayed.
+
+**Solutions**:
+
+1. **Check settings**: Make sure "Show Follower Counts" is enabled in the extension popup
+2. **Wait for processing**: The extension needs time to process comments
+3. **Refresh page**: Try refreshing the page to trigger reprocessing
+4. **Check debug mode**: Enable debug mode in settings to see detailed logs
+
+## Language Testing
+
+### Test Different Languages
+
+To test how the extension works with different languages:
+
+1. **Change browser language**:
+   - Go to Chrome Settings > Advanced > Languages
+   - Add your desired language and move it to the top
+   - Restart Chrome
+
+2. **Test the extension**:
+   ```javascript
+   quickTest();
+   testInternationalization();
+   testFollowerSpacing();
+   ```
+
+### Expected Language Results
+
+| Language | Follower Text | Spacing  | Example Display     |
+| -------- | ------------- | -------- | ------------------- |
+| English  | "followers"   | Space    | "• 7.1K followers"  |
+| Chinese  | "位粉絲"      | No space | "• 7.1K位粉絲"      |
+| Japanese | "フォロワー"  | No space | "• 7.1Kフォロワー"  |
+| Korean   | "팔로워"      | No space | "• 7.1K팔로워"      |
+| French   | "abonnés"     | Space    | "• 7,1K abonnés"    |
+| German   | "Follower"    | Space    | "• 7,1K Follower"   |
+| Spanish  | "seguidores"  | Space    | "• 7,1K seguidores" |
+
+## Debug Mode
+
+### Enable Debug Mode
+
+1. Open the extension popup
+2. Go to "Advanced Settings"
+3. Enable "Debug Mode"
+4. Check the browser console for detailed logs
+
+### Debug Information
+
+With debug mode enabled, you'll see:
+
+- Comment processing logs
+- Follower count extraction logs
+- Filter application logs
+- Internationalization logs
+
+## Performance Testing
+
+### Test Large Numbers of Comments
+
+```javascript
+// Check how many comments are processed
+console.log(
+  "Processed comments:",
+  document.querySelectorAll(".threads-filter-processed").length
+);
+
+// Check filtered comments
+console.log(
+  "Filtered comments:",
+  document.querySelectorAll(".threads-filter-grayscale, .threads-filter-hidden")
+    .length
+);
+```
+
+### Test Memory Usage
+
+```javascript
+// Check if follower cache is working
+console.log(
+  "Follower cache size:",
+  window.threadsCommentFilter.followerCache.size
+);
+```
 
 ## Contributing
 
-When adding new features to the extension:
-1. Add corresponding test functions
-2. Document what each test validates
-3. Include example usage and expected output
-4. Update this guide with new test functions
+If you find issues or want to improve the testing:
 
-## Notes
+1. **Report bugs**: Use the debug mode to get detailed error information
+2. **Test edge cases**: Try different languages, comment types, and user scenarios
+3. **Performance testing**: Test with large numbers of comments
+4. **Accessibility testing**: Test with screen readers and keyboard navigation
 
-- These are not traditional unit tests but debugging and validation functions
-- Tests are designed to run in the browser console on Threads.com
-- Results are logged to the console for easy inspection
-- Tests can be run multiple times to verify consistency
-- Some tests may require network access for profile fetching
+## Support
+
+If you need help:
+
+1. Check this testing guide
+2. Enable debug mode and check console logs
+3. Try the troubleshooting steps above
+4. Report issues with detailed error messages

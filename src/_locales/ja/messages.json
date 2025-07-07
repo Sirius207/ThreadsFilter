@@ -126,5 +126,9 @@
   "resetToDefaults": {
     "message": "デフォルトにリセット",
     "description": "Button text for resetting to defaults"
+  },
+  "followers": {
+    "message": "フォロワー",
+    "description": "Text for follower count display"
   }
 }
