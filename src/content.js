@@ -17,8 +17,9 @@ class ThreadsCommentFilter {
       hideVerified: false,
       hideDefaultAvatars: true,
       debug: false,
-      grayscaleOpacity: 0.3,
+      grayscaleOpacity: 0.1,
       clickToShow: false,
+      hideAnimation: false,
     };
 
     this.filteredComments = new Set();
@@ -41,6 +42,11 @@ class ThreadsCommentFilter {
     this.log("ThreadsCommentFilter: init() called");
     await this.loadSettings();
     this.log("ThreadsCommentFilter: Settings loaded");
+
+    // Clean up any leftover hidden states from previous sessions
+    this.cleanupHiddenStates();
+    this.log("ThreadsCommentFilter: Hidden states cleaned up");
+
     this.setupMessageListener();
     this.log("ThreadsCommentFilter: Message listener setup");
     this.startObserving();
@@ -169,6 +175,9 @@ class ThreadsCommentFilter {
   }
 
   processExistingComments() {
+    // Clean up any leftover hidden states before processing
+    this.cleanupHiddenStates();
+
     // Find comment containers - updated selectors based on actual Threads structure
     const commentSelectors = [
       'div[data-pressable-container="true"]', // Main comment container
@@ -848,37 +857,53 @@ class ThreadsCommentFilter {
       `Threads Filter: Applying filters to ${processedComments.length} processed comments`
     );
 
-    // First, clear all existing filter styles
-    processedComments.forEach((comment) => {
-      this.removeFilterStyle(comment);
-    });
+    // Track which comments should be filtered and which should not
+    const commentsToFilter = new Set();
+    const newFollowerFiltered = new Set();
+    const newAvatarFiltered = new Set();
 
-    // Clear the filtered comments sets
-    this.filteredComments.clear();
-    this.followerFilteredComments.clear();
-    this.avatarFilteredComments.clear();
-
-    // Then apply new filters
-    let filteredCount = 0;
+    // Determine which comments should be filtered
     processedComments.forEach((comment) => {
       const filterResult = this.shouldFilterComment(comment);
 
       if (filterResult.shouldFilter) {
-        this.filteredComments.add(comment);
-        this.applyFilterStyle(comment);
-        filteredCount++;
+        commentsToFilter.add(comment);
 
         // Track the reason for filtering
         if (filterResult.reason === "follower") {
-          this.followerFilteredComments.add(comment);
+          newFollowerFiltered.add(comment);
         } else if (filterResult.reason === "avatar") {
-          this.avatarFilteredComments.add(comment);
+          newAvatarFiltered.add(comment);
         }
       }
     });
 
+    // Apply changes only to comments that need state changes
+    processedComments.forEach((comment) => {
+      const shouldBeFiltered = commentsToFilter.has(comment);
+      const isCurrentlyFiltered = this.filteredComments.has(comment);
+
+      if (shouldBeFiltered && !isCurrentlyFiltered) {
+        // Comment should be filtered but isn't currently filtered
+        this.filteredComments.add(comment);
+        this.applyFilterStyle(comment);
+      } else if (!shouldBeFiltered && isCurrentlyFiltered) {
+        // Comment should be shown but is currently filtered
+        this.filteredComments.delete(comment);
+        this.removeFilterStyle(comment);
+      } else if (shouldBeFiltered && isCurrentlyFiltered) {
+        // Comment is already filtered, but we need to re-apply the style in case display mode changed
+        this.applyFilterStyle(comment);
+      }
+      // If comment state doesn't need to change, do nothing
+    });
+
+    // Update the filtered comments sets
+    this.followerFilteredComments = newFollowerFiltered;
+    this.avatarFilteredComments = newAvatarFiltered;
+
     this.log(
-      `Threads Filter: Applied filters to ${filteredCount} comments out of ${processedComments.length} total`
+      `Threads Filter: Applied filters to ${commentsToFilter.size} comments out of ${processedComments.length} total`
     );
     this.log(
       `Threads Filter: Current filtered comments set size: ${this.filteredComments.size}`
@@ -1005,8 +1030,35 @@ class ThreadsCommentFilter {
 
   applyFilterStyle(commentElement) {
     if (this.settings.displayMode === "hide") {
-      commentElement.style.display = "none";
+      if (this.settings.hideAnimation) {
+        // Use smooth animation to hide comments
+        commentElement.classList.add("threads-filter-hidden");
+
+        // Trigger the hiding animation after a small delay to ensure the element is rendered
+        setTimeout(() => {
+          commentElement.classList.add("hiding");
+        }, 10);
+
+        // Use transitionend event instead of fixed setTimeout for better reliability
+        const handleTransitionEnd = () => {
+          commentElement.style.display = "none";
+          commentElement.removeEventListener(
+            "transitionend",
+            handleTransitionEnd
+          );
+        };
+        commentElement.addEventListener("transitionend", handleTransitionEnd, {
+          once: true,
+        });
+      } else {
+        // Hide comments instantly without animation
+        commentElement.style.display = "none";
+      }
     } else if (this.settings.displayMode === "grayscale") {
+      // Ensure the comment is visible when switching to grayscale mode
+      commentElement.style.display = "";
+      commentElement.classList.remove("threads-filter-hidden", "hiding");
+
       commentElement.classList.add("threads-filter-grayscale");
       // Apply custom opacity value
       commentElement.style.setProperty(
@@ -1064,6 +1116,11 @@ class ThreadsCommentFilter {
   }
 
   removeFilterStyle(commentElement) {
+    // Remove hiding animation classes first
+    commentElement.classList.remove("threads-filter-hidden");
+    commentElement.classList.remove("hiding");
+
+    // Reset display and other styles
     commentElement.style.display = "";
     commentElement.classList.remove("threads-filter-grayscale");
     commentElement.classList.remove("click-mode");
@@ -1501,6 +1558,43 @@ class ThreadsCommentFilter {
         this.removeClickHandler(comment);
       }
     });
+  }
+
+  // Clean up any leftover hidden states from previous sessions
+  cleanupHiddenStates() {
+    this.log("ThreadsCommentFilter: Cleaning up hidden states...");
+
+    // Clean up processed comments with hidden states
+    const processedComments = document.querySelectorAll(
+      ".threads-filter-processed"
+    );
+    let cleanedProcessed = 0;
+    processedComments.forEach((comment) => {
+      if (
+        comment.classList.contains("threads-filter-hidden") ||
+        comment.classList.contains("threads-filter-grayscale") ||
+        comment.style.display === "none"
+      ) {
+        this.removeFilterStyle(comment);
+        cleanedProcessed++;
+      }
+    });
+
+    // Also clean up any elements that might have been hidden but not processed yet
+    const hiddenElements = document.querySelectorAll(
+      ".threads-filter-hidden, .threads-filter-grayscale"
+    );
+    let cleanedHidden = 0;
+    hiddenElements.forEach((element) => {
+      if (!element.classList.contains("threads-filter-processed")) {
+        this.removeFilterStyle(element);
+        cleanedHidden++;
+      }
+    });
+
+    this.log(
+      `ThreadsCommentFilter: Cleaned up ${cleanedProcessed} processed comments and ${cleanedHidden} hidden elements`
+    );
   }
 }
 

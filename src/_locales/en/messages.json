@@ -115,6 +115,14 @@
     "message": "When enabled, filtered comments require a click to show instead of hover",
     "description": "Description for click to show setting"
   },
+  "hideAnimation": {
+    "message": "Hide Animation (Beta)",
+    "description": "Toggle label for hide animation setting"
+  },
+  "hideAnimationDescription": {
+    "message": "When enabled, hidden comments use a fade-out animation; when disabled, they disappear instantly",
+    "description": "Description for hide animation setting"
+  },
   "resetToDefaults": {
     "message": "Reset to Defaults",
     "description": "Button text for resetting settings"

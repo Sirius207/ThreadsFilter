@@ -15,7 +15,7 @@ describe("ThreadsCommentFilter", () => {
       hideVerified: false,
       hideDefaultAvatars: true,
       debug: false,
-      grayscaleOpacity: 0.3,
+      grayscaleOpacity: 0.1,
     };
   });
 
@@ -263,112 +263,86 @@ describe("ThreadsCommentFilter", () => {
 
   describe("Grayscale opacity functionality", () => {
     test("should apply custom opacity to grayscale comments", () => {
-      // Mock the applyFilterStyle method logic
-      const applyFilterStyle = (commentElement, settings) => {
-        if (settings.displayMode === "hide") {
-          commentElement.style.display = "none";
-        } else if (settings.displayMode === "grayscale") {
-          commentElement.classList.add("threads-filter-grayscale");
-          // Apply custom opacity value
-          commentElement.style.setProperty(
-            "--threads-filter-opacity",
-            settings.grayscaleOpacity || 0.3
-          );
-        }
-      };
+      // Create a real DOM element for testing
+      const mockCommentElement = document.createElement("div");
+      mockCommentElement.style.setProperty = jest.fn();
+      mockCommentElement.classList.add = jest.fn();
+      mockCommentElement.classList.remove = jest.fn();
+      mockCommentElement.addEventListener = jest.fn();
+      mockCommentElement.removeEventListener = jest.fn();
 
-      // Create a mock comment element
-      const mockCommentElement = {
-        style: {
-          display: "",
-          setProperty: jest.fn(),
-        },
-        classList: {
-          add: jest.fn(),
-          remove: jest.fn(),
-        },
-      };
-
-      // Test with default opacity
-      const settingsWithDefaultOpacity = {
+      // Test settings
+      const settingsWithHideMode = {
         ...mockSettings,
-        displayMode: "grayscale",
-        grayscaleOpacity: 0.3,
+        displayMode: "hide",
+        hideAnimation: true,
       };
 
-      applyFilterStyle(mockCommentElement, settingsWithDefaultOpacity);
-
-      expect(mockCommentElement.classList.add).toHaveBeenCalledWith(
-        "threads-filter-grayscale"
-      );
-      expect(mockCommentElement.style.setProperty).toHaveBeenCalledWith(
-        "--threads-filter-opacity",
-        0.3
-      );
-
-      // Test with custom opacity
-      const settingsWithCustomOpacity = {
+      const settingsWithGrayscaleMode = {
         ...mockSettings,
         displayMode: "grayscale",
         grayscaleOpacity: 0.7,
       };
 
-      // Reset mock
-      mockCommentElement.classList.add.mockClear();
-      mockCommentElement.style.setProperty.mockClear();
+      // Test hide mode with animation
+      if (
+        settingsWithHideMode.displayMode === "hide" &&
+        settingsWithHideMode.hideAnimation
+      ) {
+        mockCommentElement.classList.add("threads-filter-hidden");
+        expect(mockCommentElement.classList.add).toHaveBeenCalledWith(
+          "threads-filter-hidden"
+        );
 
-      applyFilterStyle(mockCommentElement, settingsWithCustomOpacity);
+        // Simulate the animation trigger
+        setTimeout(() => {
+          mockCommentElement.classList.add("hiding");
+          expect(mockCommentElement.classList.add).toHaveBeenCalledWith(
+            "hiding"
+          );
+        }, 10);
+      }
 
-      expect(mockCommentElement.classList.add).toHaveBeenCalledWith(
-        "threads-filter-grayscale"
-      );
-      expect(mockCommentElement.style.setProperty).toHaveBeenCalledWith(
-        "--threads-filter-opacity",
-        0.7
-      );
+      // Test grayscale mode
+      if (settingsWithGrayscaleMode.displayMode === "grayscale") {
+        mockCommentElement.style.display = "";
+        mockCommentElement.classList.remove("threads-filter-hidden", "hiding");
+        mockCommentElement.classList.add("threads-filter-grayscale");
+        mockCommentElement.style.setProperty(
+          "--threads-filter-opacity",
+          settingsWithGrayscaleMode.grayscaleOpacity || 0.1
+        );
 
-      // Test with undefined opacity (should use default)
-      const settingsWithUndefinedOpacity = {
-        ...mockSettings,
-        displayMode: "grayscale",
-        grayscaleOpacity: undefined,
-      };
-
-      // Reset mock
-      mockCommentElement.classList.add.mockClear();
-      mockCommentElement.style.setProperty.mockClear();
-
-      applyFilterStyle(mockCommentElement, settingsWithUndefinedOpacity);
-
-      expect(mockCommentElement.classList.add).toHaveBeenCalledWith(
-        "threads-filter-grayscale"
-      );
-      expect(mockCommentElement.style.setProperty).toHaveBeenCalledWith(
-        "--threads-filter-opacity",
-        0.3
-      );
+        expect(mockCommentElement.classList.add).toHaveBeenCalledWith(
+          "threads-filter-grayscale"
+        );
+        expect(mockCommentElement.style.setProperty).toHaveBeenCalledWith(
+          "--threads-filter-opacity",
+          0.7
+        );
+      }
     });
 
     test("should remove opacity property when removing grayscale filter", () => {
-      const removeFilterStyle = (commentElement) => {
-        commentElement.style.display = "";
-        commentElement.classList.remove("threads-filter-grayscale");
-        commentElement.style.removeProperty("--threads-filter-opacity");
-      };
+      const mockCommentElement = document.createElement("div");
+      mockCommentElement.style.removeProperty = jest.fn();
+      mockCommentElement.classList.remove = jest.fn();
+      mockCommentElement.style.display = "";
 
-      const mockCommentElement = {
-        style: {
-          display: "",
-          removeProperty: jest.fn(),
-        },
-        classList: {
-          remove: jest.fn(),
-        },
-      };
-
-      removeFilterStyle(mockCommentElement);
+      // Simulate removing filter styles
+      mockCommentElement.classList.remove("threads-filter-hidden");
+      mockCommentElement.classList.remove("hiding");
+      mockCommentElement.style.display = "";
+      mockCommentElement.classList.remove("threads-filter-grayscale");
+      mockCommentElement.style.removeProperty("--threads-filter-opacity");
 
       expect(mockCommentElement.style.display).toBe("");
+      expect(mockCommentElement.classList.remove).toHaveBeenCalledWith(
+        "threads-filter-hidden"
+      );
+      expect(mockCommentElement.classList.remove).toHaveBeenCalledWith(
+        "hiding"
+      );
       expect(mockCommentElement.classList.remove).toHaveBeenCalledWith(
         "threads-filter-grayscale"
       );

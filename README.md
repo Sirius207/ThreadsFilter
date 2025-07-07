@@ -10,6 +10,14 @@ A powerful browser extension that filters Threads comments based on follower cou
 - **Avatar Detection**: Automatically hide comments from accounts with default avatars
 - **Verified Account Filter**: Option to hide comments from verified accounts
 - **Flexible Display Modes**: Choose between hiding comments completely or applying grayscale effect
+- **Hide Mode with Animation**: Smooth fade-out animation for hidden comments with toggle option
+
+### 🌍 **Internationalization**
+
+- **Multi-language Support**: English, Traditional Chinese (繁體中文), and Japanese (日本語)
+- **Language Selector**: Easy language switching with globe icon in popup header
+- **Automatic Language Detection**: Detects browser language and applies appropriate translations
+- **Complete UI Translation**: All interface elements are fully translated
 
 ### 📊 **Real-time Statistics**
 
@@ -23,16 +31,18 @@ A powerful browser extension that filters Threads comments based on follower cou
 - **Enable/Disable Filtering**: Toggle the entire filtering system on/off
 - **Follower Count Display**: Show follower counts next to usernames
 - **Display Mode Selection**:
-  - Hide filtered comments completely
-  - Apply grayscale effect to filtered comments
+  - **Hide Comments**: Completely hide filtered comments with optional smooth animation
+  - **Grayscale Comments**: Apply grayscale effect to filtered comments
 - **Follower Range Control**: Set minimum and maximum follower thresholds
 - **Avatar Filter Options**: Control default avatar and verified account filtering
+- **Click-to-Show**: Optional click interaction for filtered comments in grayscale mode
 
 ### 🛠️ **Developer Features**
 
 - **Debug Mode**: Enable detailed console logging for troubleshooting
 - **Settings Reset**: One-click reset to default configuration
 - **Real-time Updates**: Filters apply immediately when settings change
+- **Comprehensive Testing**: Full test suite with Jest and pre-commit hooks
 
 ## Installation
 
@@ -62,8 +72,11 @@ A powerful browser extension that filters Threads comments based on follower cou
 
 1. Enable "Enable Comment Filtering" in the extension popup
 2. Set your desired minimum follower count (e.g., 100)
-3. Choose your preferred display mode (Hide or Grayscale)
-4. Browse Threads - filtered comments will be automatically hidden or grayed out
+3. Choose your preferred display mode:
+   - **Hide Comments**: For complete removal with optional smooth animation
+   - **Grayscale Comments**: For visual filtering with customizable opacity
+4. (Optional) Switch language using the globe icon in the popup header
+5. Browse Threads - filtered comments will be automatically processed based on your settings
 
 ## Configuration Options
 
@@ -74,9 +87,12 @@ A powerful browser extension that filters Threads comments based on follower cou
 
 ### Display Mode
 
-- **Hide Comments**: Completely remove filtered comments from view
+- **Hide Comments**: Completely hide filtered comments from view
+  - **Hide Animation**: Toggle between smooth fade-out animation or instant disappearance
+  - **Default**: Instant hide (no animation) for better performance
 - **Grayscale Comments**: Apply grayscale effect to filtered comments
   - **Customizable Opacity**: Adjust the opacity of grayscale comments (0.1 to 1.0) in Advanced Settings
+  - **Click-to-Show**: Optional click interaction to temporarily show filtered comments
 
 ### Follower Count Filter
 
@@ -93,7 +109,32 @@ A powerful browser extension that filters Threads comments based on follower cou
 
 - **Maximum Followers**: Set upper limit for follower count filtering
 - **Grayscale Opacity**: Adjust the opacity level of filtered comments in grayscale mode (0.1 to 1.0)
+- **Click to Show Filtered Comments**: Enable click interaction for grayscale comments
+- **Hide Animation**: Toggle smooth fade-out animation for hidden comments
 - **Debug Mode**: Enable detailed console logging for troubleshooting
+
+## Recent Improvements (v1.0.2)
+
+### 🎭 **Enhanced Hide Mode**
+
+- **Smooth Animations**: Optional fade-out animation when hiding comments
+- **Performance Optimized**: Default instant hide for better performance
+- **Mode Switching**: Seamless transition between hide and grayscale modes
+- **State Management**: Automatic cleanup of hidden states on page refresh
+
+### 🌐 **Internationalization**
+
+- **Language Support**: Full UI translation in English, Traditional Chinese, and Japanese
+- **Smart Detection**: Automatic language detection based on browser settings
+- **Easy Switching**: Globe icon in popup header for quick language changes
+- **Complete Coverage**: All settings, labels, and descriptions are translated
+
+### 🔧 **Technical Improvements**
+
+- **Enhanced Mode Switching**: Improved logic for switching between display modes
+- **State Cleanup**: Proper cleanup of hidden states to prevent persistence issues
+- **Test Coverage**: Comprehensive test suite covering all new functionality
+- **Performance**: Optimized animations and state management
 
 ## Technical Details
 

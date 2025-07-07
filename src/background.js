@@ -42,7 +42,7 @@ class BackgroundService {
       hideVerified: false,
       hideDefaultAvatars: true,
       debug: false,
-      grayscaleOpacity: 0.3,
+      grayscaleOpacity: 0.1,
     };
 
     try {

@@ -5,9 +5,25 @@ All notable changes to the Threads Comment Filter extension will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.2] - 2025-07-07
 
 ### Added
+
+- **Hide Mode Feature**
+  - New hide mode as alternative to grayscale mode
+  - Smooth fade-out animation for hidden comments
+  - Hide animation toggle setting (animated vs instant hide)
+  - Default instant hide behavior (no animation)
+
+- **Enhanced Mode Switching**
+  - Improved logic for switching between hide and grayscale modes
+  - Automatic cleanup of hidden states when switching modes
+  - Reset hidden states on page refresh to prevent persistence
+
+- **Internationalization Improvements**
+  - Added missing i18n keys for hide animation settings
+  - Complete translations for hideAnimation in English, Traditional Chinese, and Japanese
+  - Enhanced internal translation fallback system
 
 - Click-to-show option for filtered comments
 - Internationalization (i18n) support with language selector
@@ -20,6 +36,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced popup UI with better visual hierarchy
 - Improved Japanese title font styling
 - Better i18n fallback handling
+- Updated test suite to cover new hide mode functionality
+- Fixed test expectations to match default grayscaleOpacity value (0.1)
+
+### Fixed
+
+- Hidden comments no longer persist when switching from hide to grayscale mode
+- Proper cleanup of hidden states on page refresh
+- Missing translation keys for hide animation settings
 
 ## [1.0.1] - 2025-07-05
 

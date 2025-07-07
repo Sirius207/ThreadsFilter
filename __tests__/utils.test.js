@@ -134,7 +134,7 @@ describe("Utility Functions", () => {
         hideVerified: false,
         hideDefaultAvatars: true,
         debug: false,
-        grayscaleOpacity: 0.3,
+        grayscaleOpacity: 0.1,
       };
 
       // Test min followers filter
@@ -226,7 +226,7 @@ describe("Utility Functions", () => {
         hideVerified: false,
         hideDefaultAvatars: true,
         debug: false,
-        grayscaleOpacity: 0.3,
+        grayscaleOpacity: 0.1,
       };
 
       const invalidSettings = {

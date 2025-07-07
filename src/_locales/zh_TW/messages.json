@@ -115,6 +115,14 @@
     "message": "啟用後，已過濾的留言需要點擊才能顯示，而不是滑鼠懸停",
     "description": "Description for click to show setting"
   },
+  "hideAnimation": {
+    "message": "隱藏動畫 (Beta)",
+    "description": "Toggle label for hide animation setting"
+  },
+  "hideAnimationDescription": {
+    "message": "啟用時，隱藏的留言會使用漸進消失動畫；停用時會直接消失",
+    "description": "Description for hide animation setting"
+  },
   "resetToDefaults": {
     "message": "重設為預設值",
     "description": "Button text for resetting settings"
