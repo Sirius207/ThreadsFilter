@@ -126,5 +126,9 @@
   "resetToDefaults": {
     "message": "Reset to Defaults",
     "description": "Button text for resetting settings"
+  },
+  "followers": {
+    "message": "followers",
+    "description": "Text for follower count display"
   }
 }

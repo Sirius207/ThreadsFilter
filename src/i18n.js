@@ -85,6 +85,7 @@ class I18n {
         hideAnimation: "Hide Animation",
         hideAnimationDescription:
           "When enabled, hidden comments use a fade-out animation; when disabled, they disappear instantly",
+        followers: "followers",
       },
       zh_TW: {
         popupTitle: "Threads 留言過濾器",
@@ -119,6 +120,7 @@ class I18n {
         hideAnimation: "隱藏動畫",
         hideAnimationDescription:
           "啟用時，隱藏的留言會使用漸進消失動畫；停用時會直接消失",
+        followers: "位粉絲",
       },
       ja: {
         popupTitle: "Threads コメントフィルター",
@@ -154,6 +156,7 @@ class I18n {
         hideAnimation: "非表示アニメーション",
         hideAnimationDescription:
           "有効にすると、非表示のコメントはフェードアウトアニメーションを使用；無効にすると即座に消えます",
+        followers: "フォロワー",
       },
     };
   }

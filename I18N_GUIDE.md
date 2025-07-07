@@ -325,3 +325,169 @@ Potential improvements for the i18n system:
 - [Chrome Extension i18n Documentation](https://developer.chrome.com/docs/extensions/mv3/i18n/)
 - [Chrome i18n API Reference](https://developer.chrome.com/docs/extensions/reference/i18n/)
 - [Unicode CLDR](http://cldr.unicode.org/) for locale data
+
+## New Followers Internationalization
+
+The extension now supports internationalization for follower counts. The system automatically detects the user's language and displays the appropriate translations.
+
+### Follower Count Translations
+
+The extension automatically displays follower counts in the user's language:
+
+- **English**: "followers"
+- **Traditional Chinese**: "位粉絲"
+- **Japanese**: "フォロワー"
+- **Korean**: "팔로워"
+- **French**: "abonnés"
+- **German**: "Follower"
+- **Spanish**: "seguidores"
+- **Russian**: "подписчиков"
+- And many more...
+
+### Usage in Content Script
+
+The content script uses a `getMessage()` function that:
+
+1. First tries to use Chrome's i18n API
+2. Falls back to internal translations if Chrome i18n fails
+3. Automatically detects the user's browser language
+4. Provides comprehensive fallback translations for 100+ languages
+
+```javascript
+// Example usage in content script
+const followerText = this.getMessage("followers");
+// Returns "followers" for English, "位粉絲" for Chinese, etc.
+```
+
+### Testing Internationalization
+
+You can test the internationalization functionality in the browser console:
+
+```javascript
+// Test follower count translations
+testInternationalization();
+
+// Test follower count display
+testFollowerCountVisibility();
+```
+
+### Dynamic Language Detection
+
+The extension automatically detects the user's language preference:
+
+1. **Primary**: Chrome's UI language (`chrome.i18n.getUILanguage()`)
+2. **Fallback**: Browser language (`navigator.language`)
+3. **Default**: English
+
+### Language Switching
+
+Users can change the language through the popup interface:
+
+1. Open the extension popup
+2. Look for the language selector (if implemented)
+3. Select your preferred language
+4. The interface will update immediately
+
+### Best Practices
+
+#### 1. Use Translation Keys
+
+Always use translation keys instead of hardcoded text:
+
+```javascript
+// ❌ Bad
+element.textContent = "Hide Comments";
+
+// ✅ Good
+element.textContent = this.getMessage("hideComments");
+```
+
+#### 2. Provide Fallbacks
+
+Always provide fallback translations for critical text:
+
+```javascript
+const message = this.getMessage("followers") || "followers";
+```
+
+#### 3. Test Multiple Languages
+
+Test your translations in multiple languages to ensure they fit properly in the UI.
+
+#### 4. Consider Text Length
+
+Different languages have different text lengths. Ensure your UI can accommodate longer translations.
+
+### Adding New Translation Keys
+
+#### 1. Add to All Language Files
+
+Add the new key to all `messages.json` files:
+
+```json
+{
+  "newFeature": {
+    "message": "New Feature",
+    "description": "Description of the new feature"
+  }
+}
+```
+
+#### 2. Add to Internal Translations
+
+Add to the `translations` object in `i18n.js`:
+
+```javascript
+en: {
+  // ... existing translations
+  newFeature: "New Feature",
+},
+zh_TW: {
+  // ... existing translations
+  newFeature: "新功能",
+},
+ja: {
+  // ... existing translations
+  newFeature: "新機能",
+},
+```
+
+#### 3. Use in Code
+
+Use the new key in your code:
+
+```javascript
+const text = this.getMessage("newFeature");
+```
+
+### Troubleshooting
+
+#### Translation Not Showing
+
+1. Check that the key exists in all language files
+2. Verify the key is spelled correctly
+3. Check browser console for errors
+4. Ensure the language file is properly formatted JSON
+
+#### Language Not Detected
+
+1. Check browser language settings
+2. Verify Chrome's UI language
+3. Check for JavaScript errors in console
+
+#### Fallback Not Working
+
+1. Verify fallback translations exist in `i18n.js`
+2. Check that the language code is correct
+3. Ensure the fallback chain is working
+
+### Contributing Translations
+
+To contribute translations:
+
+1. Fork the repository
+2. Add your language files
+3. Test thoroughly
+4. Submit a pull request
+
+Please ensure all translation keys are included and the JSON is properly formatted.

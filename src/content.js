@@ -31,6 +31,206 @@ class ThreadsCommentFilter {
     this.init();
   }
 
+  // Helper method to get internationalized text
+  getMessage(key, substitutions = []) {
+    try {
+      // Try to use Chrome's i18n API first
+      const message = chrome.i18n.getMessage(key, substitutions);
+      if (message) {
+        return message;
+      }
+    } catch (error) {
+      this.log(`Failed to get i18n message for key '${key}':`, error);
+    }
+
+    // Fallback translations for common keys
+    const fallbackTranslations = {
+      followers: {
+        en: "followers",
+        zh_TW: "位粉絲",
+        zh_CN: "位粉絲",
+        ja: "フォロワー",
+        ko: "팔로워",
+        fr: "abonnés",
+        de: "Follower",
+        es: "seguidores",
+        pt: "seguidores",
+        it: "follower",
+        ru: "подписчиков",
+        ar: "متابع",
+        hi: "फॉलोअर्स",
+        th: "ผู้ติดตาม",
+        vi: "người theo dõi",
+        tr: "takipçi",
+        nl: "volgers",
+        sv: "följare",
+        da: "følgere",
+        no: "følgere",
+        fi: "seuraajaa",
+        pl: "obserwujących",
+        cs: "sledujících",
+        sk: "sledujúcich",
+        hu: "követő",
+        ro: "urmași",
+        bg: "последователи",
+        hr: "pratitelja",
+        sr: "пратилаца",
+        sl: "sledilcev",
+        et: "järgijat",
+        lv: "sekojošo",
+        lt: "sekėjų",
+        mt: "segwaċi",
+        ga: "leanúnaithe",
+        cy: "ddilynwyr",
+        eu: "jarraitzaile",
+        ca: "seguidors",
+        gl: "seguidores",
+        oc: "seguitors",
+        sc: "segudores",
+        rm: "suandaders",
+        fur: "seguidôrs",
+        vec: "seguidori",
+        lmo: "seguidor",
+        pms: "seguidor",
+        nap: "seguitor",
+        scn: "siquituri",
+        co: "seguitori",
+        lij: "seguidô",
+        xmf: "მაყურებელი",
+        ka: "მიმდევარი",
+        hy: "հետևորդ",
+        az: "izləyici",
+        kk: "жазылған",
+        ky: "ээрчиген",
+        uz: "obunachi",
+        tk: "yzygiderli",
+        mn: "дагалт",
+        bo: "རྗེས་འཇུག",
+        dz: "རྗེས་འཇུག",
+        ne: "अनुयायी",
+        bn: "অনুসরণকারী",
+        pa: "ਫਾਲੋਅਰ",
+        gu: "અનુયાયી",
+        or: "ଅନୁଯାୟୀ",
+        ta: "பின்தொடர்பவர்கள்",
+        te: "అనుచరులు",
+        kn: "ಅನುಯಾಯಿಗಳು",
+        ml: "അനുയായികൾ",
+        si: "අනුගාමිකයින්",
+        my: "အားလုံးကို",
+        km: "អ្នកដើរតាម",
+        lo: "ຜູ້ຕິດຕາມ",
+        jv: "pengikut",
+        su: "pengikut",
+        id: "pengikut",
+        ms: "pengikut",
+        tl: "mga tagasunod",
+        ceb: "mga sumusunod",
+        war: "mga sumusunod",
+        ilo: "dagiti sumaruno",
+        pam: "mangayupaya",
+        bcl: "mga sumusunod",
+        huw: "mga sumusunod",
+        krj: "mga sumusunod",
+        mdh: "mga sumusunod",
+        tsg: "mga sumusunod",
+        cps: "mga sumusunod",
+        ak: "ahɔhɔ",
+        tw: "ahɔhɔ",
+        ee: "ɖokuiwo",
+        fon: "ɖokuiwo",
+        ha: "mabiyi",
+        ig: "ndị na-eso",
+        yo: "awọn ọmọ",
+        zu: "abalandeli",
+        xh: "abalandeli",
+        af: "volgers",
+        sq: "ndjekës",
+        am: "ተከታዮች",
+        as: "অনুসৰণকাৰী",
+        ay: "qatiqiri",
+        be: "падпісчыкаў",
+        bs: "pratilaca",
+        chr: "ᎠᏍᏓᏩᏕᏂᏏᏗ",
+        ckb: "شوێنکەوتوو",
+        dv: "ފޮލޯއަރުން",
+        el: "ακόλουθοι",
+        eo: "sekvantoj",
+        fa: "دنبال‌کنندگان",
+        fj: "vakayacagi",
+        fo: "fylgjari",
+        fy: "folgers",
+        gd: "luchd-leanmhainn",
+        gn: "tapykuehára",
+        haw: "hoa hahai",
+        he: "עוקבים",
+        ht: "swiv",
+        hmn: "cov neeg ua hauj lwm",
+        hsb: "wobdźělenja",
+        is: "fylgjendur",
+        iw: "עוקבים",
+        jw: "pengikut",
+        kl: "qatigiit",
+        lb: "Follower",
+        ln: "bato ya libota",
+        mg: "mpanaraka",
+        mi: "kaiwhai",
+        mk: "следбеници",
+        mr: "अनुयायी",
+        nb: "følgere",
+        nd: "abalandeli",
+        nn: "følgjarar",
+        nso: "ba latelago",
+        ny: "otsatira",
+        om: "kanneen",
+        os: "ахуыргæнинæгтæ",
+        ps: "پیروان",
+        qu: "qatiq",
+        rn: "kurikira",
+        rw: "abakurikira",
+        sd: "پيروي",
+        se: "dáiddár",
+        sg: "wakpängö",
+        sh: "pratitelja",
+        sm: "tagata mulimuli",
+        sn: "vateveri",
+        so: "raacayaal",
+        ss: "balandeli",
+        st: "ba latelang",
+        sw: "wafuasi",
+        syr: "ܫܘܠܛܢܐ",
+        tg: "пайравон",
+        ti: "ወዳዶች",
+        to: "kau maau",
+        tt: "иярүчеләр",
+        ug: "ئىزلىغۇچى",
+        ur: "پیروکار",
+        ve: "vha tevhelaho",
+        wo: "góor",
+        yi: "נאכגעגאנגענע",
+        zh: "位粉絲",
+      },
+    };
+
+    // Try to detect language from browser or document
+    let detectedLang = "en";
+    try {
+      detectedLang = chrome.i18n.getUILanguage() || navigator.language || "en";
+      // Extract base language code (e.g., "zh-TW" -> "zh_TW")
+      detectedLang = detectedLang.replace("-", "_");
+    } catch {
+      this.log("Failed to detect language, using English fallback");
+    }
+
+    // Return fallback translation or key itself
+    return (
+      fallbackTranslations[key]?.[detectedLang] ||
+      fallbackTranslations[key]?.[detectedLang.split("_")[0]] ||
+      fallbackTranslations[key]?.["en"] ||
+      key
+    );
+  }
+
   // Helper method for conditional logging
   log(message, ...args) {
     if (this.debug) {
@@ -490,7 +690,7 @@ class ThreadsCommentFilter {
 
       // Look for patterns like "1.2K followers", "500 followers", etc.
       const followerMatch = text.match(
-        /(\d+(?:\.\d+)?[KMB]?)\s*(?:followers?|following)/i
+        /(\d+(?:\.\d+)?[KMB]?)\s*(?:followers?|following|位粉絲|フォロワー|팔로워|abonnés?|Follower|seguidores?|подписчиков?)/i
       );
       if (followerMatch) {
         const count = this.parseFollowerCount(followerMatch[1]);
@@ -579,9 +779,21 @@ class ThreadsCommentFilter {
       /(\d+(?:\.\d+)?[KMB]?)\s*位粉絲/i,
       // Pattern 2: "34 followers" (English)
       /(\d+(?:\.\d+)?[KMB]?)\s*followers?/i,
-      // Pattern 3: Look for specific DOM structure
+      // Pattern 3: "34フォロワー" (Japanese)
+      /(\d+(?:\.\d+)?[KMB]?)\s*フォロワー/i,
+      // Pattern 4: "34팔로워" (Korean)
+      /(\d+(?:\.\d+)?[KMB]?)\s*팔로워/i,
+      // Pattern 5: "34 abonnés" (French)
+      /(\d+(?:\.\d+)?[KMB]?)\s*abonnés?/i,
+      // Pattern 6: "34 Follower" (German)
+      /(\d+(?:\.\d+)?[KMB]?)\s*Follower/i,
+      // Pattern 7: "34 seguidores" (Spanish)
+      /(\d+(?:\.\d+)?[KMB]?)\s*seguidores?/i,
+      // Pattern 8: "34 подписчиков" (Russian)
+      /(\d+(?:\.\d+)?[KMB]?)\s*подписчиков?/i,
+      // Pattern 9: Look for specific DOM structure
       // This targets the specific structure you showed: <span title="34">34</span>位粉絲
-      /<span[^>]*title="(\d+(?:\.\d+)?[KMB]?)"[^>]*>\1<\/span>\s*位粉絲/i,
+      /<span[^>]*title="(\d+(?:\.\d+)?[KMB]?)"[^>]*>\1<\/span>\s*(?:位粉絲|followers?|フォロワー|팔로워|abonnés?|Follower|seguidores?|подписчиков?)/i,
     ];
 
     // Search in the entire HTML content
@@ -603,7 +815,7 @@ class ThreadsCommentFilter {
 
       // Look for patterns like "34位粉絲", "1.2K followers", etc.
       const followerMatch = text.match(
-        /(\d+(?:\.\d+)?[KMB]?)\s*(?:位粉絲|followers?)/i
+        /(\d+(?:\.\d+)?[KMB]?)\s*(?:followers?|following|位粉絲|フォロワー|팔로워|abonnés?|Follower|seguidores?|подписчиков?)/i
       );
       if (followerMatch) {
         const count = this.parseFollowerCount(followerMatch[1]);
@@ -648,7 +860,7 @@ class ThreadsCommentFilter {
       followerCountElement.className = "threads-follower-count";
       followerCountElement.textContent = ` • ${this.formatFollowerCount(
         followerCount
-      )}位粉絲`;
+      )}${this.getFollowerSpacing()}${this.getMessage("followers")}`;
       followerCountElement.style.cssText = `
                 color: #65676b;
                 font-size: 0.9em;
@@ -749,7 +961,7 @@ class ThreadsCommentFilter {
         followerCountElement.className = "threads-follower-count";
         followerCountElement.textContent = ` • ${this.formatFollowerCount(
           authorInfo.followerCount
-        )}位粉絲`;
+        )}${this.getFollowerSpacing()}${this.getMessage("followers")}`;
         followerCountElement.style.cssText = `
                     color: #65676b;
                     font-size: 0.9em;
@@ -1438,7 +1650,7 @@ class ThreadsCommentFilter {
     this.log("=== End Debug ===");
   }
 
-  // Test function to specifically test hiding only "位粉絲" text
+  // Test function to specifically test hiding only follower count text
   testHideOnlyFollowers() {
     this.log("=== Test Hide Only Followers Text ===");
 
@@ -1596,6 +1808,329 @@ class ThreadsCommentFilter {
       `ThreadsCommentFilter: Cleaned up ${cleanedProcessed} processed comments and ${cleanedHidden} hidden elements`
     );
   }
+
+  // Test function to verify internationalization
+  testInternationalization() {
+    this.log("=== Testing Internationalization ===");
+
+    // Test different languages
+    const testLanguages = [
+      { lang: "en", expected: "followers" },
+      { lang: "zh_TW", expected: "位粉絲" },
+      { lang: "zh_CN", expected: "位粉絲" },
+      { lang: "ja", expected: "フォロワー" },
+      { lang: "ko", expected: "팔로워" },
+      { lang: "fr", expected: "abonnés" },
+      { lang: "de", expected: "Follower" },
+      { lang: "es", expected: "seguidores" },
+      { lang: "ru", expected: "подписчиков" },
+    ];
+
+    testLanguages.forEach(({ lang, expected }) => {
+      // Temporarily set the detected language
+      const originalGetUILanguage = chrome.i18n.getUILanguage;
+      chrome.i18n.getUILanguage = () => lang;
+
+      const result = this.getMessage("followers");
+      const passed = result === expected;
+
+      this.log(`Language ${lang}:`, {
+        expected,
+        result,
+        passed: passed ? "✅" : "❌",
+      });
+
+      // Restore original function
+      chrome.i18n.getUILanguage = originalGetUILanguage;
+    });
+
+    this.log("=== End Internationalization Test ===");
+  }
+
+  // Helper method to get appropriate spacing for different languages
+  getFollowerSpacing() {
+    try {
+      const detectedLang =
+        chrome.i18n.getUILanguage() || navigator.language || "en";
+      const langCode = detectedLang.split("-")[0];
+
+      // Languages that typically use space between number and text
+      const spaceLanguages = [
+        "en",
+        "fr",
+        "es",
+        "pt",
+        "it",
+        "de",
+        "nl",
+        "sv",
+        "da",
+        "no",
+        "fi",
+        "pl",
+        "cs",
+        "sk",
+        "hu",
+        "ro",
+        "bg",
+        "hr",
+        "sr",
+        "sl",
+        "et",
+        "lv",
+        "lt",
+        "mt",
+        "ga",
+        "cy",
+        "eu",
+        "ca",
+        "gl",
+        "oc",
+        "sc",
+        "rm",
+        "fur",
+        "vec",
+        "lmo",
+        "pms",
+        "nap",
+        "scn",
+        "co",
+        "lij",
+        "xmf",
+        "ka",
+        "hy",
+        "az",
+        "kk",
+        "ky",
+        "uz",
+        "tk",
+        "mn",
+        "bo",
+        "dz",
+        "ne",
+        "bn",
+        "pa",
+        "gu",
+        "or",
+        "ta",
+        "te",
+        "kn",
+        "ml",
+        "si",
+        "my",
+        "km",
+        "lo",
+        "jv",
+        "su",
+        "id",
+        "ms",
+        "tl",
+        "ceb",
+        "war",
+        "ilo",
+        "pam",
+        "bcl",
+        "huw",
+        "krj",
+        "mdh",
+        "tsg",
+        "cps",
+        "ak",
+        "tw",
+        "ee",
+        "fon",
+        "ha",
+        "ig",
+        "yo",
+        "zu",
+        "xh",
+        "af",
+        "sq",
+        "am",
+        "as",
+        "ay",
+        "be",
+        "bs",
+        "chr",
+        "ckb",
+        "dv",
+        "el",
+        "eo",
+        "fa",
+        "fj",
+        "fo",
+        "fy",
+        "gd",
+        "gn",
+        "haw",
+        "he",
+        "ht",
+        "hmn",
+        "hsb",
+        "is",
+        "iw",
+        "jw",
+        "kl",
+        "lb",
+        "ln",
+        "mg",
+        "mi",
+        "mk",
+        "mr",
+        "nb",
+        "nd",
+        "nn",
+        "nso",
+        "ny",
+        "om",
+        "os",
+        "ps",
+        "qu",
+        "rn",
+        "rw",
+        "sd",
+        "se",
+        "sg",
+        "sh",
+        "sm",
+        "sn",
+        "so",
+        "ss",
+        "st",
+        "sw",
+        "syr",
+        "tg",
+        "ti",
+        "to",
+        "tt",
+        "ug",
+        "ur",
+        "ve",
+        "wo",
+        "yi",
+      ];
+
+      // Languages that typically don't use space between number and text
+      const noSpaceLanguages = [
+        "zh",
+        "ja",
+        "ko",
+        "th",
+        "vi",
+        "ar",
+        "hi",
+        "tr",
+        "ru",
+        "uk",
+        "bg",
+        "mk",
+        "sr",
+        "mn",
+        "bo",
+        "dz",
+        "ne",
+        "bn",
+        "pa",
+        "gu",
+        "or",
+        "ta",
+        "te",
+        "kn",
+        "ml",
+        "si",
+        "my",
+        "km",
+        "lo",
+      ];
+
+      if (spaceLanguages.includes(langCode)) {
+        return " ";
+      } else if (noSpaceLanguages.includes(langCode)) {
+        return "";
+      } else {
+        // Default to space for unknown languages
+        return " ";
+      }
+    } catch {
+      // Default to space if language detection fails
+      return " ";
+    }
+  }
+
+  // Test function to verify spacing functionality
+  testFollowerSpacing() {
+    this.log("=== Testing Follower Spacing ===");
+
+    // Test different languages and their expected spacing
+    const testCases = [
+      { lang: "en", expected: " ", description: "English - should have space" },
+      {
+        lang: "zh_TW",
+        expected: "",
+        description: "Traditional Chinese - no space",
+      },
+      {
+        lang: "zh_CN",
+        expected: "",
+        description: "Simplified Chinese - no space",
+      },
+      { lang: "ja", expected: "", description: "Japanese - no space" },
+      { lang: "ko", expected: "", description: "Korean - no space" },
+      { lang: "fr", expected: " ", description: "French - should have space" },
+      { lang: "de", expected: " ", description: "German - should have space" },
+      { lang: "es", expected: " ", description: "Spanish - should have space" },
+      { lang: "ru", expected: "", description: "Russian - no space" },
+      { lang: "ar", expected: "", description: "Arabic - no space" },
+      { lang: "th", expected: "", description: "Thai - no space" },
+      { lang: "vi", expected: "", description: "Vietnamese - no space" },
+    ];
+
+    testCases.forEach(({ lang, expected, description }) => {
+      // Temporarily set the detected language
+      const originalGetUILanguage = chrome.i18n.getUILanguage;
+      chrome.i18n.getUILanguage = () => lang;
+
+      const result = this.getFollowerSpacing();
+      const passed = result === expected;
+
+      this.log(`Language ${lang}:`, {
+        expected: `"${expected}"`,
+        result: `"${result}"`,
+        passed: passed ? "✅" : "❌",
+        description,
+      });
+
+      // Restore original function
+      chrome.i18n.getUILanguage = originalGetUILanguage;
+    });
+
+    // Test complete follower count display
+    this.log("=== Testing Complete Follower Display ===");
+    const testCount = 7099;
+    const testLanguages = ["en", "zh_TW", "ja", "fr"];
+
+    testLanguages.forEach((lang) => {
+      const originalGetUILanguage = chrome.i18n.getUILanguage;
+      chrome.i18n.getUILanguage = () => lang;
+
+      const spacing = this.getFollowerSpacing();
+      const followerText = this.getMessage("followers");
+      const formattedCount = this.formatFollowerCount(testCount);
+      const completeDisplay = ` • ${formattedCount}${spacing}${followerText}`;
+
+      this.log(`Complete display for ${lang}:`, {
+        count: testCount,
+        formattedCount,
+        spacing: `"${spacing}"`,
+        followerText,
+        completeDisplay,
+      });
+
+      chrome.i18n.getUILanguage = originalGetUILanguage;
+    });
+
+    this.log("=== End Spacing Test ===");
+  }
 }
 
 // Initialize when page loads
@@ -1632,6 +2167,10 @@ if (document.readyState === "loading") {
       window.threadsCommentFilter.debugFollowerCountElements();
     window.testHideOnlyFollowers = () =>
       window.threadsCommentFilter.testHideOnlyFollowers();
+    window.testInternationalization = () =>
+      window.threadsCommentFilter.testInternationalization();
+    window.testFollowerSpacing = () =>
+      window.threadsCommentFilter.testFollowerSpacing();
   });
 } else {
   if (globalDebug) {
@@ -1655,6 +2194,10 @@ if (document.readyState === "loading") {
     window.threadsCommentFilter.debugFollowerCountElements();
   window.testHideOnlyFollowers = () =>
     window.threadsCommentFilter.testHideOnlyFollowers();
+  window.testInternationalization = () =>
+    window.threadsCommentFilter.testInternationalization();
+  window.testFollowerSpacing = () =>
+    window.threadsCommentFilter.testFollowerSpacing();
 }
 
 // Also try to initialize when window loads (fallback)
@@ -1680,5 +2223,245 @@ window.addEventListener("load", () => {
       window.threadsCommentFilter.debugFollowerCountElements();
     window.testHideOnlyFollowers = () =>
       window.threadsCommentFilter.testHideOnlyFollowers();
+    window.testInternationalization = () =>
+      window.threadsCommentFilter.testInternationalization();
+    window.testFollowerSpacing = () =>
+      window.threadsCommentFilter.testFollowerSpacing();
   }
 });
+
+// Simple test function that can be called immediately
+window.testExtensionStatus = () => {
+  console.log("=== Extension Status Test ===");
+  console.log(
+    "window.threadsCommentFilter exists:",
+    !!window.threadsCommentFilter
+  );
+  console.log(
+    "window.testInternationalization exists:",
+    !!window.testInternationalization
+  );
+  console.log(
+    "window.testFollowerSpacing exists:",
+    !!window.testFollowerSpacing
+  );
+
+  if (window.threadsCommentFilter) {
+    console.log("Extension is loaded and ready!");
+    console.log("Available test functions:");
+    console.log("- testAvatarDetection()");
+    console.log("- testFollowerCountFeature()");
+    console.log("- testFetchFollowerCount(username)");
+    console.log("- testFollowerCountVisibility()");
+    console.log("- testToggleFollowerCount()");
+    console.log("- debugFollowerCountElements()");
+    console.log("- testHideOnlyFollowers()");
+    console.log("- testInternationalization()");
+    console.log("- testFollowerSpacing()");
+  } else {
+    console.log(
+      "Extension not loaded yet. Please wait a moment and try again."
+    );
+  }
+  console.log("=== End Status Test ===");
+};
+
+// Simple inline test for immediate use
+window.quickTest = () => {
+  console.log("=== Quick Test ===");
+
+  // Test if we can access the extension
+  if (window.threadsCommentFilter) {
+    console.log("✅ Extension loaded successfully");
+
+    // Test internationalization
+    try {
+      const result = window.threadsCommentFilter.getMessage("followers");
+      console.log("✅ Internationalization test:", result);
+    } catch (error) {
+      console.log("❌ Internationalization test failed:", error);
+    }
+
+    // Test spacing
+    try {
+      const spacing = window.threadsCommentFilter.getFollowerSpacing();
+      console.log("✅ Spacing test:", `"${spacing}"`);
+    } catch (error) {
+      console.log("❌ Spacing test failed:", error);
+    }
+
+    // Test complete display
+    try {
+      const count = 7099;
+      const formattedCount =
+        window.threadsCommentFilter.formatFollowerCount(count);
+      const spacing = window.threadsCommentFilter.getFollowerSpacing();
+      const followerText = window.threadsCommentFilter.getMessage("followers");
+      const completeDisplay = ` • ${formattedCount}${spacing}${followerText}`;
+      console.log("✅ Complete display test:", completeDisplay);
+    } catch (error) {
+      console.log("❌ Complete display test failed:", error);
+    }
+  } else {
+    console.log("❌ Extension not loaded yet");
+    console.log("Please wait a moment and try again, or reload the page");
+    console.log("You can also try: checkExtension()");
+  }
+
+  console.log("=== End Quick Test ===");
+};
+
+// Simple check function that doesn't require the extension to be loaded
+window.checkExtension = () => {
+  console.log("=== Extension Check ===");
+  console.log(
+    "window.threadsCommentFilter exists:",
+    !!window.threadsCommentFilter
+  );
+  console.log("window.quickTest exists:", !!window.quickTest);
+  console.log(
+    "window.testInternationalization exists:",
+    !!window.testInternationalization
+  );
+  console.log(
+    "window.testFollowerSpacing exists:",
+    !!window.testFollowerSpacing
+  );
+
+  if (window.threadsCommentFilter) {
+    console.log("✅ Extension is loaded and ready!");
+    console.log("Available test functions:");
+    console.log("- quickTest()");
+    console.log("- testExtensionStatus()");
+    console.log("- testInternationalization()");
+    console.log("- testFollowerSpacing()");
+    console.log("- testFollowerCountFeature()");
+    console.log("- testFollowerCountVisibility()");
+    console.log("- testToggleFollowerCount()");
+    console.log("- debugFollowerCountElements()");
+    console.log("- testHideOnlyFollowers()");
+    console.log("- testAvatarDetection()");
+    console.log("- testFetchFollowerCount(username)");
+  } else {
+    console.log("❌ Extension not loaded yet");
+    console.log("Please wait a moment and try again");
+    console.log("If the problem persists, try:");
+    console.log("1. Reload the page");
+    console.log("2. Check if the extension is enabled in chrome://extensions/");
+    console.log("3. Make sure you're on a Threads page");
+  }
+
+  console.log("=== End Extension Check ===");
+};
+
+// Simple inline test that works immediately
+window.simpleTest = () => {
+  console.log("=== Simple Test ===");
+
+  // Test basic functionality without requiring extension
+  console.log("Testing basic functionality...");
+
+  // Test if we're on a Threads page
+  const isThreadsPage = window.location.hostname.includes("threads.com");
+  console.log("On Threads page:", isThreadsPage);
+
+  // Test if extension is loaded
+  const extensionLoaded = !!window.threadsCommentFilter;
+  console.log("Extension loaded:", extensionLoaded);
+
+  // Test if test functions are available
+  const quickTestAvailable = !!window.quickTest;
+  const checkExtensionAvailable = !!window.checkExtension;
+  console.log("quickTest available:", quickTestAvailable);
+  console.log("checkExtension available:", checkExtensionAvailable);
+
+  if (extensionLoaded) {
+    console.log("✅ Extension is working!");
+    console.log("Try: quickTest() or testInternationalization()");
+  } else {
+    console.log("❌ Extension not loaded");
+    console.log("Try: checkExtension() to see what's available");
+    console.log("Or wait a moment and try again");
+  }
+
+  console.log("=== End Simple Test ===");
+};
+
+// Simple check function that doesn't require the extension to be loaded
+
+// Simple test script that can be run immediately
+window.testI18nNow = () => {
+  console.log("=== Testing Internationalization Now ===");
+
+  // Test basic language detection
+  const browserLang = navigator.language || "en";
+  const chromeLang = chrome?.i18n?.getUILanguage?.() || browserLang;
+  console.log("Browser language:", browserLang);
+  console.log("Chrome UI language:", chromeLang);
+
+  // Test if we can access Chrome i18n API
+  try {
+    if (chrome?.i18n?.getMessage) {
+      const message = chrome.i18n.getMessage("followers");
+      console.log("Chrome i18n message:", message);
+    } else {
+      console.log("Chrome i18n API not available");
+    }
+  } catch (error) {
+    console.log("Chrome i18n API error:", error);
+  }
+
+  // Test language-specific spacing logic
+  const langCode = browserLang.split("-")[0];
+  const spaceLanguages = ["en", "fr", "es", "pt", "it", "de", "nl"];
+  const noSpaceLanguages = [
+    "zh",
+    "ja",
+    "ko",
+    "th",
+    "vi",
+    "ar",
+    "hi",
+    "tr",
+    "ru",
+  ];
+
+  let expectedSpacing = " ";
+  if (noSpaceLanguages.includes(langCode)) {
+    expectedSpacing = "";
+  }
+
+  console.log("Language code:", langCode);
+  console.log("Expected spacing:", `"${expectedSpacing}"`);
+  console.log(
+    "Space languages include this:",
+    spaceLanguages.includes(langCode)
+  );
+  console.log(
+    "No-space languages include this:",
+    noSpaceLanguages.includes(langCode)
+  );
+
+  // Test if extension is available
+  if (window.threadsCommentFilter) {
+    console.log("✅ Extension is loaded!");
+    try {
+      const actualSpacing = window.threadsCommentFilter.getFollowerSpacing();
+      const actualMessage = window.threadsCommentFilter.getMessage("followers");
+      console.log("Extension spacing:", `"${actualSpacing}"`);
+      console.log("Extension message:", actualMessage);
+      console.log(
+        "Spacing matches expected:",
+        actualSpacing === expectedSpacing
+      );
+    } catch (error) {
+      console.log("Extension test failed:", error);
+    }
+  } else {
+    console.log("❌ Extension not loaded yet");
+  }
+
+  console.log("=== End I18n Test ===");
+};
+
+// Simple inline test that works immediately
