@@ -34,7 +34,7 @@
   overflow: hidden;
   transition: all 0.5s ease-in-out;
   opacity: 1;
-  max-height: 1000px; /* Large enough to accommodate most comments */
+  max-height: 2000px; /* Large enough to accommodate most comments */
   margin: 8px 0;
   padding: 8px 0;
 }

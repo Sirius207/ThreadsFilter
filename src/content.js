@@ -859,7 +859,6 @@ class ThreadsCommentFilter {
 
     // Track which comments should be filtered and which should not
     const commentsToFilter = new Set();
-    const commentsToShow = new Set();
     const newFollowerFiltered = new Set();
     const newAvatarFiltered = new Set();
 
@@ -876,8 +875,6 @@ class ThreadsCommentFilter {
         } else if (filterResult.reason === "avatar") {
           newAvatarFiltered.add(comment);
         }
-      } else {
-        commentsToShow.add(comment);
       }
     });
 
@@ -1042,10 +1039,17 @@ class ThreadsCommentFilter {
           commentElement.classList.add("hiding");
         }, 10);
 
-        // After animation completes, set display to none to completely remove from layout
-        setTimeout(() => {
+        // Use transitionend event instead of fixed setTimeout for better reliability
+        const handleTransitionEnd = () => {
           commentElement.style.display = "none";
-        }, 500); // Match the CSS transition duration
+          commentElement.removeEventListener(
+            "transitionend",
+            handleTransitionEnd
+          );
+        };
+        commentElement.addEventListener("transitionend", handleTransitionEnd, {
+          once: true,
+        });
       } else {
         // Hide comments instantly without animation
         commentElement.style.display = "none";
@@ -1583,14 +1587,7 @@ class ThreadsCommentFilter {
     let cleanedHidden = 0;
     hiddenElements.forEach((element) => {
       if (!element.classList.contains("threads-filter-processed")) {
-        element.classList.remove("threads-filter-hidden", "hiding");
-        element.classList.remove(
-          "threads-filter-grayscale",
-          "click-mode",
-          "showing"
-        );
-        element.style.display = "";
-        element.style.removeProperty("--threads-filter-opacity");
+        this.removeFilterStyle(element);
         cleanedHidden++;
       }
     });
