@@ -201,16 +201,15 @@ To test how the extension works with different languages:
 
 ### Expected Language Results
 
-| Language | Follower Text | Spacing  | Example Display      |
-| -------- | ------------- | -------- | -------------------- |
-| English  | "followers"   | Space    | "• 7.1K followers"   |
-| Chinese  | "位粉絲"      | No space | "• 7.1K位粉絲"       |
-| Japanese | "フォロワー"  | No space | "• 7.1Kフォロワー"   |
-| Korean   | "팔로워"      | No space | "• 7.1K팔로워"       |
-| French   | "abonnés"     | Space    | "• 7,1K abonnés"     |
-| German   | "Follower"    | Space    | "• 7,1K Follower"    |
-| Spanish  | "seguidores"  | Space    | "• 7,1K seguidores"  |
-| Russian  | "подписчиков" | No space | "• 7,1K подписчиков" |
+| Language | Follower Text | Spacing  | Example Display     |
+| -------- | ------------- | -------- | ------------------- |
+| English  | "followers"   | Space    | "• 7.1K followers"  |
+| Chinese  | "位粉絲"      | No space | "• 7.1K位粉絲"      |
+| Japanese | "フォロワー"  | No space | "• 7.1Kフォロワー"  |
+| Korean   | "팔로워"      | No space | "• 7.1K팔로워"      |
+| French   | "abonnés"     | Space    | "• 7,1K abonnés"    |
+| German   | "Follower"    | Space    | "• 7,1K Follower"   |
+| Spanish  | "seguidores"  | Space    | "• 7,1K seguidores" |
 
 ## Debug Mode
 
