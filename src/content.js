@@ -1465,6 +1465,57 @@ class ThreadsCommentFilter {
     commentElement.style.visibility = "";
   }
 
+  // Set of excluded container classes for blur logic
+  static _excludedContainerClasses = new Set([
+    "x1lliihq",
+    "x1plvlek",
+    "xryxfnj",
+    "x1n2onr6",
+    "x1ji0vk5",
+    "x18bv5gf",
+    "xi7mnp6",
+    "x193iq5w",
+    "xeuugli",
+    "x1fj9vlw",
+    "x13faqbe",
+    "x1vvkbs",
+    "x1s928wv",
+    "xhkezso",
+    "x1gmr53x",
+    "x1cpjm7i",
+    "x1fgarty",
+    "x1943h6x",
+    "x1i0vuye",
+    "xjohtrz",
+    "xo1l8bm",
+    "xp07o12",
+    "x1yc453h",
+    "xat24cr",
+    "xdj266r",
+  ]);
+
+  // Private helper to get blur target spans
+  _getBlurTargetSpans(commentElement) {
+    const excludedClasses = ThreadsCommentFilter._excludedContainerClasses;
+    const textSpans = commentElement.querySelectorAll("span");
+    return Array.from(textSpans).filter((span) => {
+      const hasExcludedClass = Array.from(span.classList).some((cls) =>
+        excludedClasses.has(cls)
+      );
+      // Only apply blur to spans that contain text and are likely content spans
+      return (
+        span.textContent &&
+        span.textContent.trim() &&
+        !span.children.length &&
+        !span.classList.contains("threads-follower-count") && // Skip follower count
+        !span.closest(
+          'abbr[aria-label*="前"], abbr[aria-label*="ago"], time'
+        ) && // Skip time elements
+        !hasExcludedClass
+      );
+    });
+  }
+
   applyFilterStyle(commentElement) {
     if (this.settings.displayMode === "hide") {
       if (this.settings.hideAnimation) {
@@ -1502,54 +1553,14 @@ class ThreadsCommentFilter {
 
       // Apply blur effect to text spans if blur amount is greater than 0
       if (this.settings.blurAmount > 0) {
-        // Set CSS custom property for blur amount
         commentElement.style.setProperty(
           "--threads-filter-blur",
           `${this.settings.blurAmount}px`
         );
-
-        // Only target spans that contain actual text content, not container spans
-        const textSpans = commentElement.querySelectorAll("span");
-        textSpans.forEach((span) => {
-          // Only apply blur to spans that contain text and are likely content spans
-          // Skip spans that are likely containers (have children or specific classes)
-          if (
-            span.textContent &&
-            span.textContent.trim() &&
-            !span.children.length &&
-            !span.classList.contains("threads-follower-count") && // Skip follower count
-            !span.closest('abbr[aria-label*="前"]') && // Skip time elements
-            !span.closest('abbr[aria-label*="ago"]') && // Skip time elements
-            !span.closest("time") && // Skip time elements
-            !span.classList.contains("x1lliihq") && // Skip container classes
-            !span.classList.contains("x1plvlek") &&
-            !span.classList.contains("xryxfnj") &&
-            !span.classList.contains("x1n2onr6") &&
-            !span.classList.contains("x1ji0vk5") &&
-            !span.classList.contains("x18bv5gf") &&
-            !span.classList.contains("xi7mnp6") &&
-            !span.classList.contains("x193iq5w") &&
-            !span.classList.contains("xeuugli") &&
-            !span.classList.contains("x1fj9vlw") &&
-            !span.classList.contains("x13faqbe") &&
-            !span.classList.contains("x1vvkbs") &&
-            !span.classList.contains("x1s928wv") &&
-            !span.classList.contains("xhkezso") &&
-            !span.classList.contains("x1gmr53x") &&
-            !span.classList.contains("x1cpjm7i") &&
-            !span.classList.contains("x1fgarty") &&
-            !span.classList.contains("x1943h6x") &&
-            !span.classList.contains("x1i0vuye") &&
-            !span.classList.contains("xjohtrz") &&
-            !span.classList.contains("xo1l8bm") &&
-            !span.classList.contains("xp07o12") &&
-            !span.classList.contains("x1yc453h") &&
-            !span.classList.contains("xat24cr") &&
-            !span.classList.contains("xdj266r")
-          ) {
-            // Use CSS custom property for blur effect
-            span.style.filter = `blur(var(--threads-filter-blur, 0px))`;
-          }
+        // Use helper to get target spans
+        const targetSpans = this._getBlurTargetSpans(commentElement);
+        targetSpans.forEach((span) => {
+          span.style.filter = `blur(var(--threads-filter-blur, 0px))`;
         });
       }
 
@@ -1617,47 +1628,10 @@ class ThreadsCommentFilter {
     commentElement.style.removeProperty("--threads-filter-blur");
 
     // Remove blur effects from text spans
-    const textSpans = commentElement.querySelectorAll("span");
-    textSpans.forEach((span) => {
-      // Only remove blur from spans that contain text and are likely content spans
-      // Skip spans that are likely containers (have children or specific classes)
-      if (
-        span.textContent &&
-        span.textContent.trim() &&
-        !span.children.length &&
-        !span.classList.contains("threads-follower-count") && // Skip follower count
-        !span.closest('abbr[aria-label*="前"]') && // Skip time elements
-        !span.closest('abbr[aria-label*="ago"]') && // Skip time elements
-        !span.closest("time") && // Skip time elements
-        !span.classList.contains("x1lliihq") && // Skip container classes
-        !span.classList.contains("x1plvlek") &&
-        !span.classList.contains("xryxfnj") &&
-        !span.classList.contains("x1n2onr6") &&
-        !span.classList.contains("x1ji0vk5") &&
-        !span.classList.contains("x18bv5gf") &&
-        !span.classList.contains("xi7mnp6") &&
-        !span.classList.contains("x193iq5w") &&
-        !span.classList.contains("xeuugli") &&
-        !span.classList.contains("x1fj9vlw") &&
-        !span.classList.contains("x13faqbe") &&
-        !span.classList.contains("x1vvkbs") &&
-        !span.classList.contains("x1s928wv") &&
-        !span.classList.contains("xhkezso") &&
-        !span.classList.contains("x1gmr53x") &&
-        !span.classList.contains("x1cpjm7i") &&
-        !span.classList.contains("x1fgarty") &&
-        !span.classList.contains("x1943h6x") &&
-        !span.classList.contains("x1i0vuye") &&
-        !span.classList.contains("xjohtrz") &&
-        !span.classList.contains("xo1l8bm") &&
-        !span.classList.contains("xp07o12") &&
-        !span.classList.contains("x1yc453h") &&
-        !span.classList.contains("xat24cr") &&
-        !span.classList.contains("xdj266r")
-      ) {
-        if (span.style.filter && span.style.filter.includes("blur")) {
-          span.style.filter = "";
-        }
+    const targetSpans = this._getBlurTargetSpans(commentElement);
+    targetSpans.forEach((span) => {
+      if (span.style.filter && span.style.filter.includes("blur")) {
+        span.style.filter = "";
       }
     });
 
@@ -2106,51 +2080,13 @@ class ThreadsCommentFilter {
       } else {
         comment.style.removeProperty("--threads-filter-blur");
       }
-
-      const textSpans = comment.querySelectorAll("span");
-      textSpans.forEach((span) => {
-        // Only apply blur to spans that contain text and are likely content spans
-        // Skip spans that are likely containers (have children or specific classes)
-        if (
-          span.textContent &&
-          span.textContent.trim() &&
-          !span.children.length &&
-          !span.classList.contains("threads-follower-count") && // Skip follower count
-          !span.closest('abbr[aria-label*="前"]') && // Skip time elements
-          !span.closest('abbr[aria-label*="ago"]') && // Skip time elements
-          !span.closest("time") && // Skip time elements
-          !span.classList.contains("x1lliihq") && // Skip container classes
-          !span.classList.contains("x1plvlek") &&
-          !span.classList.contains("xryxfnj") &&
-          !span.classList.contains("x1n2onr6") &&
-          !span.classList.contains("x1ji0vk5") &&
-          !span.classList.contains("x18bv5gf") &&
-          !span.classList.contains("xi7mnp6") &&
-          !span.classList.contains("x193iq5w") &&
-          !span.classList.contains("xeuugli") &&
-          !span.classList.contains("x1fj9vlw") &&
-          !span.classList.contains("x13faqbe") &&
-          !span.classList.contains("x1vvkbs") &&
-          !span.classList.contains("x1s928wv") &&
-          !span.classList.contains("xhkezso") &&
-          !span.classList.contains("x1gmr53x") &&
-          !span.classList.contains("x1cpjm7i") &&
-          !span.classList.contains("x1fgarty") &&
-          !span.classList.contains("x1943h6x") &&
-          !span.classList.contains("x1i0vuye") &&
-          !span.classList.contains("xjohtrz") &&
-          !span.classList.contains("xo1l8bm") &&
-          !span.classList.contains("xp07o12") &&
-          !span.classList.contains("x1yc453h") &&
-          !span.classList.contains("xat24cr") &&
-          !span.classList.contains("xdj266r")
-        ) {
-          if (this.settings.blurAmount > 0) {
-            // Use CSS custom property for blur effect
-            span.style.filter = `blur(var(--threads-filter-blur, 0px))`;
-          } else {
-            span.style.filter = "";
-          }
+      // Use helper to get target spans
+      const targetSpans = this._getBlurTargetSpans(comment);
+      targetSpans.forEach((span) => {
+        if (this.settings.blurAmount > 0) {
+          span.style.filter = `blur(var(--threads-filter-blur, 0px))`;
+        } else {
+          span.style.filter = "";
         }
       });
     });
