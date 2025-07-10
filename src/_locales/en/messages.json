@@ -130,5 +130,13 @@
   "followers": {
     "message": "followers",
     "description": "Text for follower count display"
+  },
+  "blurAmount": {
+    "message": "Blur Amount:",
+    "description": "Label for blur amount slider"
+  },
+  "blurAmountDescription": {
+    "message": "Apply blur filter to filtered comment text (0px to 3px)",
+    "description": "Description for blur amount setting"
   }
 }

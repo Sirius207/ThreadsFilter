@@ -109,6 +109,7 @@ A powerful browser extension that filters Threads comments based on follower cou
 
 - **Maximum Followers**: Set upper limit for follower count filtering
 - **Grayscale Opacity**: Adjust the opacity level of filtered comments in grayscale mode (0.1 to 1.0)
+- **Blur Amount**: Apply blur filter to filtered comment text (0px to 3px)
 - **Click to Show Filtered Comments**: Enable click interaction for grayscale comments
 - **Hide Animation**: Toggle smooth fade-out animation for hidden comments
 - **Debug Mode**: Enable detailed console logging for troubleshooting

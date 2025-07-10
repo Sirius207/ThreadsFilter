@@ -134,21 +134,39 @@
           <div class="input-group">
             <label for="grayscaleOpacity">
               <span data-i18n="grayscaleOpacity">Grayscale Opacity:</span>
-              <span id="opacityValue">0.3</span>
+              <span id="opacityValue">0.1</span>
             </label>
             <input
               type="range"
               id="grayscaleOpacity"
-              min="0.1"
+              min="0.05"
               max="1.0"
-              step="0.1"
-              value="0.3"
+              step="0.05"
+              value="0.1"
             />
             <p
               class="setting-description"
               data-i18n="grayscaleOpacityDescription"
             >
               Adjust the opacity of filtered comments in grayscale mode
+            </p>
+          </div>
+
+          <div class="input-group">
+            <label for="blurAmount">
+              <span data-i18n="blurAmount">Blur Amount:</span>
+              <span id="blurValue">0px</span>
+            </label>
+            <input
+              type="range"
+              id="blurAmount"
+              min="0"
+              max="3"
+              step="0.5"
+              value="0"
+            />
+            <p class="setting-description" data-i18n="blurAmountDescription">
+              Apply blur filter to filtered comment text (0px to 3px)
             </p>
           </div>
 

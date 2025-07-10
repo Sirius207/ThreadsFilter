@@ -16,6 +16,7 @@ const DEFAULT_SETTINGS = {
   hideDefaultAvatars: true,
   debug: false,
   grayscaleOpacity: 0.1,
+  blurAmount: 0,
   clickToShow: false,
   hideAnimation: false,
 };
@@ -473,6 +474,7 @@ class ThreadsCommentFilter {
 
           // Update opacity for existing grayscale comments
           this.updateGrayscaleOpacity();
+          this.updateBlurAmount();
           this.updateClickMode();
           break;
         case "applySettings":
@@ -1463,6 +1465,57 @@ class ThreadsCommentFilter {
     commentElement.style.visibility = "";
   }
 
+  // Set of excluded container classes for blur logic
+  static _excludedContainerClasses = new Set([
+    "x1lliihq",
+    "x1plvlek",
+    "xryxfnj",
+    "x1n2onr6",
+    "x1ji0vk5",
+    "x18bv5gf",
+    "xi7mnp6",
+    "x193iq5w",
+    "xeuugli",
+    "x1fj9vlw",
+    "x13faqbe",
+    "x1vvkbs",
+    "x1s928wv",
+    "xhkezso",
+    "x1gmr53x",
+    "x1cpjm7i",
+    "x1fgarty",
+    "x1943h6x",
+    "x1i0vuye",
+    "xjohtrz",
+    "xo1l8bm",
+    "xp07o12",
+    "x1yc453h",
+    "xat24cr",
+    "xdj266r",
+  ]);
+
+  // Private helper to get blur target spans
+  _getBlurTargetSpans(commentElement) {
+    const excludedClasses = ThreadsCommentFilter._excludedContainerClasses;
+    const textSpans = commentElement.querySelectorAll("span");
+    return Array.from(textSpans).filter((span) => {
+      const hasExcludedClass = Array.from(span.classList).some((cls) =>
+        excludedClasses.has(cls)
+      );
+      // Only apply blur to spans that contain text and are likely content spans
+      return (
+        span.textContent &&
+        span.textContent.trim() &&
+        !span.children.length &&
+        !span.classList.contains("threads-follower-count") && // Skip follower count
+        !span.closest(
+          'abbr[aria-label*="前"], abbr[aria-label*="ago"], time'
+        ) && // Skip time elements
+        !hasExcludedClass
+      );
+    });
+  }
+
   applyFilterStyle(commentElement) {
     if (this.settings.displayMode === "hide") {
       if (this.settings.hideAnimation) {
@@ -1497,6 +1550,19 @@ class ThreadsCommentFilter {
         "--threads-filter-opacity",
         this.settings.grayscaleOpacity || 0.3
       );
+
+      // Apply blur effect to text spans if blur amount is greater than 0
+      if (this.settings.blurAmount > 0) {
+        commentElement.style.setProperty(
+          "--threads-filter-blur",
+          `${this.settings.blurAmount}px`
+        );
+        // Use helper to get target spans
+        const targetSpans = this._getBlurTargetSpans(commentElement);
+        targetSpans.forEach((span) => {
+          span.style.filter = `blur(var(--threads-filter-blur, 0px))`;
+        });
+      }
 
       // Handle click mode
       if (this.settings.clickToShow) {
@@ -1559,6 +1625,15 @@ class ThreadsCommentFilter {
     commentElement.classList.remove("click-mode");
     commentElement.classList.remove("showing");
     commentElement.style.removeProperty("--threads-filter-opacity");
+    commentElement.style.removeProperty("--threads-filter-blur");
+
+    // Remove blur effects from text spans
+    const targetSpans = this._getBlurTargetSpans(commentElement);
+    targetSpans.forEach((span) => {
+      if (span.style.filter && span.style.filter.includes("blur")) {
+        span.style.filter = "";
+      }
+    });
 
     // Remove click handler if exists
     this.removeClickHandler(commentElement);
@@ -1987,6 +2062,33 @@ class ThreadsCommentFilter {
         "--threads-filter-opacity",
         this.settings.grayscaleOpacity || 0.3
       );
+    });
+  }
+
+  // Update blur amount for existing grayscale comments when the setting changes
+  updateBlurAmount() {
+    const processedComments = document.querySelectorAll(
+      ".threads-filter-grayscale"
+    );
+    processedComments.forEach((comment) => {
+      // Update CSS custom property for blur amount
+      if (this.settings.blurAmount > 0) {
+        comment.style.setProperty(
+          "--threads-filter-blur",
+          `${this.settings.blurAmount}px`
+        );
+      } else {
+        comment.style.removeProperty("--threads-filter-blur");
+      }
+      // Use helper to get target spans
+      const targetSpans = this._getBlurTargetSpans(comment);
+      targetSpans.forEach((span) => {
+        if (this.settings.blurAmount > 0) {
+          span.style.filter = `blur(var(--threads-filter-blur, 0px))`;
+        } else {
+          span.style.filter = "";
+        }
+      });
     });
   }
 
