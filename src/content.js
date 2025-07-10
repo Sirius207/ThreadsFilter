@@ -442,6 +442,14 @@ class ThreadsCommentFilter {
     }
   }
 
+  // 提取 debounce 清理邏輯
+  _clearFilterApplyDebounce() {
+    if (this.filterApplyDebounce) {
+      clearTimeout(this.filterApplyDebounce);
+      this.filterApplyDebounce = null;
+    }
+  }
+
   setupMessageListener() {
     this.log("ThreadsCommentFilter: Setting up message listener");
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -457,11 +465,8 @@ class ThreadsCommentFilter {
           this.settings = message.settings;
           this.debug = this.settings.debug || false; // Update debug mode
 
-          // Clear any pending debounced operations
-          if (this.filterApplyDebounce) {
-            clearTimeout(this.filterApplyDebounce);
-            this.filterApplyDebounce = null;
-          }
+          // 清理 debounce timer
+          this._clearFilterApplyDebounce();
 
           // Apply filters immediately for settings changes
           this.applyFiltersImmediate();
@@ -474,11 +479,8 @@ class ThreadsCommentFilter {
           this.log("ThreadsCommentFilter: Applying settings manually");
           this.settings = message.settings;
 
-          // Clear any pending debounced operations
-          if (this.filterApplyDebounce) {
-            clearTimeout(this.filterApplyDebounce);
-            this.filterApplyDebounce = null;
-          }
+          // 清理 debounce timer
+          this._clearFilterApplyDebounce();
 
           // Apply filters immediately for manual settings application
           this.applyFiltersImmediate();
@@ -1450,6 +1452,17 @@ class ThreadsCommentFilter {
     return { shouldFilter: false };
   }
 
+  // 提取重置隱藏動畫樣式的邏輯
+  _resetHideAnimationStyles(commentElement) {
+    commentElement.style.display = "";
+    commentElement.style.opacity = "";
+    commentElement.style.height = "";
+    commentElement.style.overflow = "";
+    commentElement.style.pointerEvents = "";
+    commentElement.style.position = "";
+    commentElement.style.visibility = "";
+  }
+
   applyFilterStyle(commentElement) {
     if (this.settings.displayMode === "hide") {
       if (this.settings.hideAnimation) {
@@ -1475,14 +1488,8 @@ class ThreadsCommentFilter {
       // First, completely clear all hide animation styles to ensure proper transition
       commentElement.classList.remove("threads-filter-hidden", "hiding");
 
-      // Reset all styles that might have been set during hide animation
-      commentElement.style.display = "";
-      commentElement.style.opacity = "";
-      commentElement.style.height = "";
-      commentElement.style.overflow = "";
-      commentElement.style.pointerEvents = "";
-      commentElement.style.position = "";
-      commentElement.style.visibility = "";
+      // Reset所有隱藏動畫樣式
+      this._resetHideAnimationStyles(commentElement);
 
       commentElement.classList.add("threads-filter-grayscale");
       // Apply custom opacity value
@@ -1545,14 +1552,8 @@ class ThreadsCommentFilter {
     commentElement.classList.remove("threads-filter-hidden");
     commentElement.classList.remove("hiding");
 
-    // Reset all styles that might have been set during hide animation
-    commentElement.style.display = "";
-    commentElement.style.opacity = "";
-    commentElement.style.height = "";
-    commentElement.style.overflow = "";
-    commentElement.style.pointerEvents = "";
-    commentElement.style.position = "";
-    commentElement.style.visibility = "";
+    // Reset所有隱藏動畫樣式
+    this._resetHideAnimationStyles(commentElement);
 
     commentElement.classList.remove("threads-filter-grayscale");
     commentElement.classList.remove("click-mode");
@@ -2194,53 +2195,12 @@ class ThreadsCommentFilter {
   }
 }
 
-// Initialize when page loads
-if (globalDebug) {
-  console.log(
-    "Threads Comment Filter: Script starting, readyState:",
-    document.readyState
-  );
-}
+// Initialize the extension only once
+if (!window.threadsCommentFilter) {
+  const threadsCommentFilter = new ThreadsCommentFilter();
+  window.threadsCommentFilter = threadsCommentFilter;
 
-if (document.readyState === "loading") {
-  if (globalDebug) {
-    console.log(
-      "Threads Comment Filter: DOM still loading, adding event listener"
-    );
-  }
-  document.addEventListener("DOMContentLoaded", () => {
-    if (globalDebug) {
-      console.log("Threads Comment Filter: DOMContentLoaded event fired");
-    }
-    window.threadsCommentFilter = new ThreadsCommentFilter();
-    // Expose test function globally
-    window.testAvatarDetection = () =>
-      window.threadsCommentFilter.testAvatarDetection();
-    window.testFollowerCountFeature = () =>
-      window.threadsCommentFilter.testFollowerCountFeature();
-    window.testFetchFollowerCount = (username) =>
-      window.threadsCommentFilter.testFetchFollowerCount(username);
-    window.testFollowerCountVisibility = () =>
-      window.threadsCommentFilter.testFollowerCountVisibility();
-    window.testToggleFollowerCount = () =>
-      window.threadsCommentFilter.testToggleFollowerCount();
-    window.debugFollowerCountElements = () =>
-      window.threadsCommentFilter.debugFollowerCountElements();
-    window.testHideOnlyFollowers = () =>
-      window.threadsCommentFilter.testHideOnlyFollowers();
-    window.testInternationalization = () =>
-      window.threadsCommentFilter.testInternationalization();
-    window.testFollowerSpacing = () =>
-      window.threadsCommentFilter.testFollowerSpacing();
-  });
-} else {
-  if (globalDebug) {
-    console.log(
-      "Threads Comment Filter: DOM already loaded, creating instance immediately"
-    );
-  }
-  window.threadsCommentFilter = new ThreadsCommentFilter();
-  // Expose test function globally
+  // Expose test functions globally
   window.testAvatarDetection = () =>
     window.threadsCommentFilter.testAvatarDetection();
   window.testFollowerCountFeature = () =>
@@ -2259,261 +2219,227 @@ if (document.readyState === "loading") {
     window.threadsCommentFilter.testInternationalization();
   window.testFollowerSpacing = () =>
     window.threadsCommentFilter.testFollowerSpacing();
-}
 
-// Also try to initialize when window loads (fallback)
-window.addEventListener("load", () => {
-  if (globalDebug) {
-    console.log("Threads Comment Filter: Window load event fired");
-  }
-  // Only create new instance if one doesn't already exist
-  if (!window.threadsCommentFilter) {
-    window.threadsCommentFilter = new ThreadsCommentFilter();
-    // Expose test function globally
-    window.testAvatarDetection = () =>
-      window.threadsCommentFilter.testAvatarDetection();
-    window.testFollowerCountFeature = () =>
-      window.threadsCommentFilter.testFollowerCountFeature();
-    window.testFetchFollowerCount = (username) =>
-      window.threadsCommentFilter.testFetchFollowerCount(username);
-    window.testFollowerCountVisibility = () =>
-      window.threadsCommentFilter.testFollowerCountVisibility();
-    window.testToggleFollowerCount = () =>
-      window.threadsCommentFilter.testToggleFollowerCount();
-    window.debugFollowerCountElements = () =>
-      window.threadsCommentFilter.debugFollowerCountElements();
-    window.testHideOnlyFollowers = () =>
-      window.threadsCommentFilter.testHideOnlyFollowers();
-    window.testInternationalization = () =>
-      window.threadsCommentFilter.testInternationalization();
-    window.testFollowerSpacing = () =>
-      window.threadsCommentFilter.testFollowerSpacing();
-  }
-});
-
-// Simple test function that can be called immediately
-window.testExtensionStatus = () => {
-  console.log("=== Extension Status Test ===");
-  console.log(
-    "window.threadsCommentFilter exists:",
-    !!window.threadsCommentFilter
-  );
-  console.log(
-    "window.testInternationalization exists:",
-    !!window.testInternationalization
-  );
-  console.log(
-    "window.testFollowerSpacing exists:",
-    !!window.testFollowerSpacing
-  );
-
-  if (window.threadsCommentFilter) {
-    console.log("Extension is loaded and ready!");
-    console.log("Available test functions:");
-    console.log("- testAvatarDetection()");
-    console.log("- testFollowerCountFeature()");
-    console.log("- testFetchFollowerCount(username)");
-    console.log("- testFollowerCountVisibility()");
-    console.log("- testToggleFollowerCount()");
-    console.log("- debugFollowerCountElements()");
-    console.log("- testHideOnlyFollowers()");
-    console.log("- testInternationalization()");
-    console.log("- testFollowerSpacing()");
-  } else {
+  // Additional test functions
+  window.testExtensionStatus = () => {
+    console.log("=== Extension Status Test ===");
     console.log(
-      "Extension not loaded yet. Please wait a moment and try again."
+      "window.threadsCommentFilter exists:",
+      !!window.threadsCommentFilter
     );
-  }
-  console.log("=== End Status Test ===");
-};
+    console.log(
+      "window.testInternationalization exists:",
+      !!window.testInternationalization
+    );
+    console.log(
+      "window.testFollowerSpacing exists:",
+      !!window.testFollowerSpacing
+    );
 
-// Simple inline test for immediate use
-window.quickTest = () => {
-  console.log("=== Quick Test ===");
-
-  // Test if we can access the extension
-  if (window.threadsCommentFilter) {
-    console.log("✅ Extension loaded successfully");
-
-    // Test internationalization
-    try {
-      const result = window.threadsCommentFilter.getMessage("followers");
-      console.log("✅ Internationalization test:", result);
-    } catch (error) {
-      console.log("❌ Internationalization test failed:", error);
-    }
-
-    // Test spacing
-    try {
-      const spacing = window.threadsCommentFilter.getFollowerSpacing();
-      console.log("✅ Spacing test:", `"${spacing}"`);
-    } catch (error) {
-      console.log("❌ Spacing test failed:", error);
-    }
-
-    // Test complete display
-    try {
-      const count = 7099;
-      const formattedCount =
-        window.threadsCommentFilter.formatFollowerCount(count);
-      const spacing = window.threadsCommentFilter.getFollowerSpacing();
-      const followerText = window.threadsCommentFilter.getMessage("followers");
-      const completeDisplay = ` • ${formattedCount}${spacing}${followerText}`;
-      console.log("✅ Complete display test:", completeDisplay);
-    } catch (error) {
-      console.log("❌ Complete display test failed:", error);
-    }
-  } else {
-    console.log("❌ Extension not loaded yet");
-    console.log("Please wait a moment and try again, or reload the page");
-    console.log("You can also try: checkExtension()");
-  }
-
-  console.log("=== End Quick Test ===");
-};
-
-// Simple check function that doesn't require the extension to be loaded
-window.checkExtension = () => {
-  console.log("=== Extension Check ===");
-  console.log(
-    "window.threadsCommentFilter exists:",
-    !!window.threadsCommentFilter
-  );
-  console.log("window.quickTest exists:", !!window.quickTest);
-  console.log(
-    "window.testInternationalization exists:",
-    !!window.testInternationalization
-  );
-  console.log(
-    "window.testFollowerSpacing exists:",
-    !!window.testFollowerSpacing
-  );
-
-  if (window.threadsCommentFilter) {
-    console.log("✅ Extension is loaded and ready!");
-    console.log("Available test functions:");
-    console.log("- quickTest()");
-    console.log("- testExtensionStatus()");
-    console.log("- testInternationalization()");
-    console.log("- testFollowerSpacing()");
-    console.log("- testFollowerCountFeature()");
-    console.log("- testFollowerCountVisibility()");
-    console.log("- testToggleFollowerCount()");
-    console.log("- debugFollowerCountElements()");
-    console.log("- testHideOnlyFollowers()");
-    console.log("- testAvatarDetection()");
-    console.log("- testFetchFollowerCount(username)");
-  } else {
-    console.log("❌ Extension not loaded yet");
-    console.log("Please wait a moment and try again");
-    console.log("If the problem persists, try:");
-    console.log("1. Reload the page");
-    console.log("2. Check if the extension is enabled in chrome://extensions/");
-    console.log("3. Make sure you're on a Threads page");
-  }
-
-  console.log("=== End Extension Check ===");
-};
-
-// Simple inline test that works immediately
-window.simpleTest = () => {
-  console.log("=== Simple Test ===");
-
-  // Test basic functionality without requiring extension
-  console.log("Testing basic functionality...");
-
-  // Test if we're on a Threads page
-  const isThreadsPage = window.location.hostname.includes("threads.com");
-  console.log("On Threads page:", isThreadsPage);
-
-  // Test if extension is loaded
-  const extensionLoaded = !!window.threadsCommentFilter;
-  console.log("Extension loaded:", extensionLoaded);
-
-  // Test if test functions are available
-  const quickTestAvailable = !!window.quickTest;
-  const checkExtensionAvailable = !!window.checkExtension;
-  console.log("quickTest available:", quickTestAvailable);
-  console.log("checkExtension available:", checkExtensionAvailable);
-
-  if (extensionLoaded) {
-    console.log("✅ Extension is working!");
-    console.log("Try: quickTest() or testInternationalization()");
-  } else {
-    console.log("❌ Extension not loaded");
-    console.log("Try: checkExtension() to see what's available");
-    console.log("Or wait a moment and try again");
-  }
-
-  console.log("=== End Simple Test ===");
-};
-
-// Simple check function that doesn't require the extension to be loaded
-
-// Simple test script that can be run immediately
-window.testI18nNow = () => {
-  console.log("=== Testing Internationalization Now ===");
-
-  // Test basic language detection
-  const browserLang = navigator.language || "en";
-  const chromeLang = chrome?.i18n?.getUILanguage?.() || browserLang;
-  console.log("Browser language:", browserLang);
-  console.log("Chrome UI language:", chromeLang);
-
-  // Test if we can access Chrome i18n API
-  try {
-    if (chrome?.i18n?.getMessage) {
-      const message = chrome.i18n.getMessage("followers");
-      console.log("Chrome i18n message:", message);
+    if (window.threadsCommentFilter) {
+      console.log("Extension is loaded and ready!");
+      console.log("Available test functions:");
+      console.log("- testAvatarDetection()");
+      console.log("- testFollowerCountFeature()");
+      console.log("- testFetchFollowerCount(username)");
+      console.log("- testFollowerCountVisibility()");
+      console.log("- testToggleFollowerCount()");
+      console.log("- debugFollowerCountElements()");
+      console.log("- testHideOnlyFollowers()");
+      console.log("- testInternationalization()");
+      console.log("- testFollowerSpacing()");
     } else {
-      console.log("Chrome i18n API not available");
-    }
-  } catch (error) {
-    console.log("Chrome i18n API error:", error);
-  }
-
-  // Test language-specific spacing logic
-  const langCode = browserLang.split("-")[0];
-
-  let expectedSpacing = " ";
-  if (NO_SPACE_LANGUAGES.includes(langCode)) {
-    expectedSpacing = "";
-  }
-
-  console.log("Language code:", langCode);
-  console.log("Expected spacing:", `"${expectedSpacing}"`);
-  console.log(
-    "Space languages include this:",
-    SPACE_LANGUAGES.includes(langCode)
-  );
-  console.log(
-    "No-space languages include this:",
-    NO_SPACE_LANGUAGES.includes(langCode)
-  );
-
-  // Test if extension is available
-  if (window.threadsCommentFilter) {
-    console.log("✅ Extension is loaded!");
-    try {
-      const actualSpacing = window.threadsCommentFilter.getFollowerSpacing();
-      const actualMessage = window.threadsCommentFilter.getMessage("followers");
-      console.log("Extension spacing:", `"${actualSpacing}"`);
-      console.log("Extension message:", actualMessage);
       console.log(
-        "Spacing matches expected:",
-        actualSpacing === expectedSpacing
+        "Extension not loaded yet. Please wait a moment and try again."
       );
-    } catch (error) {
-      console.log("Extension test failed:", error);
     }
-  } else {
-    console.log("❌ Extension not loaded yet");
-  }
+    console.log("=== End Status Test ===");
+  };
 
-  console.log("=== End I18n Test ===");
-};
+  window.quickTest = () => {
+    console.log("=== Quick Test ===");
 
-// Simple inline test that works immediately
+    // Test if we can access the extension
+    if (window.threadsCommentFilter) {
+      console.log("✅ Extension loaded successfully");
+
+      // Test internationalization
+      try {
+        const result = window.threadsCommentFilter.getMessage("followers");
+        console.log("✅ Internationalization test:", result);
+      } catch (error) {
+        console.log("❌ Internationalization test failed:", error);
+      }
+
+      // Test spacing
+      try {
+        const spacing = window.threadsCommentFilter.getFollowerSpacing();
+        console.log("✅ Spacing test:", `"${spacing}"`);
+      } catch (error) {
+        console.log("❌ Spacing test failed:", error);
+      }
+
+      // Test complete display
+      try {
+        const count = 7099;
+        const formattedCount =
+          window.threadsCommentFilter.formatFollowerCount(count);
+        const spacing = window.threadsCommentFilter.getFollowerSpacing();
+        const followerText =
+          window.threadsCommentFilter.getMessage("followers");
+        const completeDisplay = ` • ${formattedCount}${spacing}${followerText}`;
+        console.log("✅ Complete display test:", completeDisplay);
+      } catch (error) {
+        console.log("❌ Complete display test failed:", error);
+      }
+    } else {
+      console.log("❌ Extension not loaded yet");
+      console.log("Please wait a moment and try again, or reload the page");
+      console.log("You can also try: checkExtension()");
+    }
+
+    console.log("=== End Quick Test ===");
+  };
+
+  window.checkExtension = () => {
+    console.log("=== Extension Check ===");
+    console.log(
+      "window.threadsCommentFilter exists:",
+      !!window.threadsCommentFilter
+    );
+    console.log("window.quickTest exists:", !!window.quickTest);
+    console.log(
+      "window.testInternationalization exists:",
+      !!window.testInternationalization
+    );
+    console.log(
+      "window.testFollowerSpacing exists:",
+      !!window.testFollowerSpacing
+    );
+
+    if (window.threadsCommentFilter) {
+      console.log("✅ Extension is loaded and ready!");
+      console.log("Available test functions:");
+      console.log("- quickTest()");
+      console.log("- testExtensionStatus()");
+      console.log("- testInternationalization()");
+      console.log("- testFollowerSpacing()");
+      console.log("- testFollowerCountFeature()");
+      console.log("- testFollowerCountVisibility()");
+      console.log("- testToggleFollowerCount()");
+      console.log("- debugFollowerCountElements()");
+      console.log("- testHideOnlyFollowers()");
+      console.log("- testAvatarDetection()");
+      console.log("- testFetchFollowerCount(username)");
+    } else {
+      console.log("❌ Extension not loaded yet");
+      console.log("Please wait a moment and try again");
+      console.log("If the problem persists, try:");
+      console.log("1. Reload the page");
+      console.log(
+        "2. Check if the extension is enabled in chrome://extensions/"
+      );
+      console.log("3. Make sure you're on a Threads page");
+    }
+
+    console.log("=== End Extension Check ===");
+  };
+
+  window.simpleTest = () => {
+    console.log("=== Simple Test ===");
+
+    // Test basic functionality without requiring extension
+    console.log("Testing basic functionality...");
+
+    // Test if we're on a Threads page
+    const isThreadsPage = window.location.hostname.includes("threads.com");
+    console.log("On Threads page:", isThreadsPage);
+
+    // Test if extension is loaded
+    const extensionLoaded = !!window.threadsCommentFilter;
+    console.log("Extension loaded:", extensionLoaded);
+
+    // Test if test functions are available
+    const quickTestAvailable = !!window.quickTest;
+    const checkExtensionAvailable = !!window.checkExtension;
+    console.log("quickTest available:", quickTestAvailable);
+    console.log("checkExtension available:", checkExtensionAvailable);
+
+    if (extensionLoaded) {
+      console.log("✅ Extension is working!");
+      console.log("Try: quickTest() or testInternationalization()");
+    } else {
+      console.log("❌ Extension not loaded");
+      console.log("Try: checkExtension() to see what's available");
+      console.log("Or wait a moment and try again");
+    }
+
+    console.log("=== End Simple Test ===");
+  };
+
+  window.testI18nNow = () => {
+    console.log("=== Testing Internationalization Now ===");
+
+    // Test basic language detection
+    const browserLang = navigator.language || "en";
+    const chromeLang = chrome?.i18n?.getUILanguage?.() || browserLang;
+    console.log("Browser language:", browserLang);
+    console.log("Chrome UI language:", chromeLang);
+
+    // Test if we can access Chrome i18n API
+    try {
+      if (chrome?.i18n?.getMessage) {
+        const message = chrome.i18n.getMessage("followers");
+        console.log("Chrome i18n message:", message);
+      } else {
+        console.log("Chrome i18n API not available");
+      }
+    } catch (error) {
+      console.log("Chrome i18n API error:", error);
+    }
+
+    // Test language-specific spacing logic
+    const langCode = browserLang.split("-")[0];
+
+    let expectedSpacing = " ";
+    if (NO_SPACE_LANGUAGES.includes(langCode)) {
+      expectedSpacing = "";
+    }
+
+    console.log("Language code:", langCode);
+    console.log("Expected spacing:", `"${expectedSpacing}"`);
+    console.log(
+      "Space languages include this:",
+      SPACE_LANGUAGES.includes(langCode)
+    );
+    console.log(
+      "No-space languages include this:",
+      NO_SPACE_LANGUAGES.includes(langCode)
+    );
+
+    // Test if extension is available
+    if (window.threadsCommentFilter) {
+      console.log("✅ Extension is loaded!");
+      try {
+        const actualSpacing = window.threadsCommentFilter.getFollowerSpacing();
+        const actualMessage =
+          window.threadsCommentFilter.getMessage("followers");
+        console.log("Extension spacing:", `"${actualSpacing}"`);
+        console.log("Extension message:", actualMessage);
+        console.log(
+          "Spacing matches expected:",
+          actualSpacing === expectedSpacing
+        );
+      } catch (error) {
+        console.log("Extension test failed:", error);
+      }
+    } else {
+      console.log("❌ Extension not loaded yet");
+    }
+
+    console.log("=== End I18n Test ===");
+  };
+}
 
 // Cleanup when page is unloaded
 window.addEventListener("beforeunload", () => {
@@ -2521,7 +2447,3 @@ window.addEventListener("beforeunload", () => {
     window.threadsCommentFilter.cleanup();
   }
 });
-
-// Initialize the extension
-const threadsCommentFilter = new ThreadsCommentFilter();
-window.threadsCommentFilter = threadsCommentFilter;

@@ -288,6 +288,17 @@ class PopupController {
     this.updateUI();
   }
 
+  // 提取重置 stats 並更新 UI 的邏輯
+  _resetStatsAndUI() {
+    this.stats = {
+      totalCount: 0,
+      filteredCount: 0,
+      followerFilteredCount: 0,
+      avatarFilteredCount: 0,
+    };
+    this.updateStatsDisplay();
+  }
+
   async requestStats(forceUpdate = false) {
     // Prevent concurrent updates
     if (this.isUpdating && !forceUpdate) {
@@ -354,13 +365,7 @@ class PopupController {
               );
             }
             // Reset stats to show that we can't get them
-            this.stats = {
-              totalCount: 0,
-              filteredCount: 0,
-              followerFilteredCount: 0,
-              avatarFilteredCount: 0,
-            };
-            this.updateStatsDisplay();
+            this._resetStatsAndUI();
           } else {
             if (this.settings.debug) {
               console.log(
@@ -375,13 +380,7 @@ class PopupController {
           console.log("Popup: Not on a Threads page, cannot get stats");
         }
         // Reset stats when not on a Threads page
-        this.stats = {
-          totalCount: 0,
-          filteredCount: 0,
-          followerFilteredCount: 0,
-          avatarFilteredCount: 0,
-        };
-        this.updateStatsDisplay();
+        this._resetStatsAndUI();
       }
     } catch (error) {
       if (this.settings.debug) {
