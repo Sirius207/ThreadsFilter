@@ -175,7 +175,7 @@ class PopupController {
     if (opacitySlider && opacityValue) {
       opacitySlider.addEventListener("input", (e) => {
         this.settings.grayscaleOpacity = parseFloat(e.target.value);
-        opacityValue.textContent = this.settings.grayscaleOpacity.toFixed(1);
+        opacityValue.textContent = this.settings.grayscaleOpacity.toFixed(2);
         this.saveSettings();
       });
     }
@@ -267,7 +267,7 @@ class PopupController {
     const opacityValue = document.getElementById("opacityValue");
     if (opacitySlider && opacityValue) {
       opacitySlider.value = this.settings.grayscaleOpacity;
-      opacityValue.textContent = this.settings.grayscaleOpacity.toFixed(1);
+      opacityValue.textContent = this.settings.grayscaleOpacity.toFixed(2);
     }
 
     // Set Advanced Settings initial state (collapsed by default)
