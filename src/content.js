@@ -5,6 +5,21 @@ if (globalDebug) {
   console.log("Threads Comment Filter Extension: content.js loaded");
 }
 
+// Default settings
+const DEFAULT_SETTINGS = {
+  enableFilter: true,
+  showFollowerCount: true,
+  displayMode: "grayscale",
+  minFollowers: 20,
+  maxFollowers: null,
+  hideVerified: false,
+  hideDefaultAvatars: true,
+  debug: false,
+  grayscaleOpacity: 0.1,
+  clickToShow: false,
+  hideAnimation: false,
+};
+
 // Language spacing constants - moved outside class for performance
 const SPACE_LANGUAGES = [
   "en",
@@ -345,27 +360,18 @@ const FALLBACK_TRANSLATIONS = {
 
 class ThreadsCommentFilter {
   constructor() {
-    this.log("ThreadsCommentFilter: Constructor called");
-    this.settings = {
-      enableFilter: true,
-      showFollowerCount: true,
-      displayMode: "grayscale",
-      minFollowers: 20,
-      maxFollowers: null,
-      hideVerified: false,
-      hideDefaultAvatars: true,
-      debug: false,
-      grayscaleOpacity: 0.1,
-      clickToShow: false,
-      hideAnimation: false,
-    };
-
+    this.settings = { ...DEFAULT_SETTINGS };
     this.filteredComments = new Set();
     this.followerFilteredComments = new Set();
     this.avatarFilteredComments = new Set();
-    this.observer = null;
     this.followerCache = new Map();
-
+    this.processedComments = new Set();
+    this.observer = null;
+    this.isInitialized = false;
+    this.statsUpdateDebounce = null; // Debounce timer for stats updates
+    this.lastStatsUpdate = 0; // Track last stats update time
+    this.filterApplyDebounce = null; // Debounce timer for filter application
+    this.lastFilterApply = 0; // Track last filter application time
     this.init();
   }
 
@@ -450,7 +456,16 @@ class ThreadsCommentFilter {
           this.log("ThreadsCommentFilter: Updating settings");
           this.settings = message.settings;
           this.debug = this.settings.debug || false; // Update debug mode
-          this.applyFilters();
+
+          // Clear any pending debounced operations
+          if (this.filterApplyDebounce) {
+            clearTimeout(this.filterApplyDebounce);
+            this.filterApplyDebounce = null;
+          }
+
+          // Apply filters immediately for settings changes
+          this.applyFiltersImmediate();
+
           // Update opacity for existing grayscale comments
           this.updateGrayscaleOpacity();
           this.updateClickMode();
@@ -458,7 +473,15 @@ class ThreadsCommentFilter {
         case "applySettings":
           this.log("ThreadsCommentFilter: Applying settings manually");
           this.settings = message.settings;
-          this.applyFilters();
+
+          // Clear any pending debounced operations
+          if (this.filterApplyDebounce) {
+            clearTimeout(this.filterApplyDebounce);
+            this.filterApplyDebounce = null;
+          }
+
+          // Apply filters immediately for manual settings application
+          this.applyFiltersImmediate();
           break;
         case "getStats": {
           this.log("ThreadsCommentFilter: Sending stats");
@@ -922,7 +945,7 @@ class ThreadsCommentFilter {
         });
 
         // Re-apply filters
-        this.applyFilters();
+        this.applyFiltersImmediate();
 
         this.log(
           `Successfully fetched follower count for @${username}: ${followerCount}`
@@ -1202,6 +1225,24 @@ class ThreadsCommentFilter {
   }
 
   applyFilters() {
+    // Debounce filter application to prevent conflicts with Threads DOM updates
+    const now = Date.now();
+    if (now - this.lastFilterApply < 1000) {
+      // Debounce within 1 second
+      if (this.filterApplyDebounce) {
+        clearTimeout(this.filterApplyDebounce);
+      }
+      this.filterApplyDebounce = setTimeout(() => {
+        this.applyFilters();
+      }, 1000);
+      return;
+    }
+
+    this.lastFilterApply = now;
+    this.applyFiltersImmediate();
+  }
+
+  applyFiltersImmediate() {
     if (!this.settings.enableFilter) {
       // When filter is disabled, show ALL comments regardless of their previous state
       const allProcessedComments = document.querySelectorAll(
@@ -1412,33 +1453,36 @@ class ThreadsCommentFilter {
   applyFilterStyle(commentElement) {
     if (this.settings.displayMode === "hide") {
       if (this.settings.hideAnimation) {
-        // Use smooth animation to hide comments
+        // Use a more stable approach for hide animation
+        // Instead of relying on CSS transitions that can conflict with DOM updates
         commentElement.classList.add("threads-filter-hidden");
 
-        // Trigger the hiding animation after a small delay to ensure the element is rendered
-        setTimeout(() => {
-          commentElement.classList.add("hiding");
-        }, 10);
+        // Use a more reliable method to hide the element
+        // Set opacity to 0 and height to 0 to make it effectively invisible
+        commentElement.style.opacity = "0";
+        commentElement.style.height = "0";
+        commentElement.style.overflow = "hidden";
+        commentElement.style.pointerEvents = "none";
 
-        // Use transitionend event instead of fixed setTimeout for better reliability
-        const handleTransitionEnd = () => {
-          commentElement.style.display = "none";
-          commentElement.removeEventListener(
-            "transitionend",
-            handleTransitionEnd
-          );
-        };
-        commentElement.addEventListener("transitionend", handleTransitionEnd, {
-          once: true,
-        });
+        // Remove the element from layout flow
+        commentElement.style.position = "absolute";
+        commentElement.style.visibility = "hidden";
       } else {
         // Hide comments instantly without animation
         commentElement.style.display = "none";
       }
     } else if (this.settings.displayMode === "grayscale") {
-      // Ensure the comment is visible when switching to grayscale mode
-      commentElement.style.display = "";
+      // First, completely clear all hide animation styles to ensure proper transition
       commentElement.classList.remove("threads-filter-hidden", "hiding");
+
+      // Reset all styles that might have been set during hide animation
+      commentElement.style.display = "";
+      commentElement.style.opacity = "";
+      commentElement.style.height = "";
+      commentElement.style.overflow = "";
+      commentElement.style.pointerEvents = "";
+      commentElement.style.position = "";
+      commentElement.style.visibility = "";
 
       commentElement.classList.add("threads-filter-grayscale");
       // Apply custom opacity value
@@ -1501,8 +1545,15 @@ class ThreadsCommentFilter {
     commentElement.classList.remove("threads-filter-hidden");
     commentElement.classList.remove("hiding");
 
-    // Reset display and other styles
+    // Reset all styles that might have been set during hide animation
     commentElement.style.display = "";
+    commentElement.style.opacity = "";
+    commentElement.style.height = "";
+    commentElement.style.overflow = "";
+    commentElement.style.pointerEvents = "";
+    commentElement.style.position = "";
+    commentElement.style.visibility = "";
+
     commentElement.classList.remove("threads-filter-grayscale");
     commentElement.classList.remove("click-mode");
     commentElement.classList.remove("showing");
@@ -1882,6 +1933,20 @@ class ThreadsCommentFilter {
   }
 
   sendStatsToPopup() {
+    // Debounce rapid stats updates (within 1000ms)
+    const now = Date.now();
+    if (now - this.lastStatsUpdate < 1000) {
+      if (this.statsUpdateDebounce) {
+        clearTimeout(this.statsUpdateDebounce);
+      }
+      this.statsUpdateDebounce = setTimeout(() => {
+        this.sendStatsToPopup();
+      }, 1000);
+      return;
+    }
+
+    this.lastStatsUpdate = now;
+
     // Send stats to popup if it's open
     try {
       // Dynamically calculate total processed comments to ensure accuracy
@@ -1976,6 +2041,22 @@ class ThreadsCommentFilter {
     this.log(
       `ThreadsCommentFilter: Cleaned up ${cleanedProcessed} processed comments and ${cleanedHidden} hidden elements`
     );
+  }
+
+  // Cleanup method to clear timers and observers
+  cleanup() {
+    if (this.observer) {
+      this.observer.disconnect();
+      this.observer = null;
+    }
+    if (this.statsUpdateDebounce) {
+      clearTimeout(this.statsUpdateDebounce);
+      this.statsUpdateDebounce = null;
+    }
+    if (this.filterApplyDebounce) {
+      clearTimeout(this.filterApplyDebounce);
+      this.filterApplyDebounce = null;
+    }
   }
 
   // Test function to verify internationalization
@@ -2433,3 +2514,14 @@ window.testI18nNow = () => {
 };
 
 // Simple inline test that works immediately
+
+// Cleanup when page is unloaded
+window.addEventListener("beforeunload", () => {
+  if (window.threadsCommentFilter) {
+    window.threadsCommentFilter.cleanup();
+  }
+});
+
+// Initialize the extension
+const threadsCommentFilter = new ThreadsCommentFilter();
+window.threadsCommentFilter = threadsCommentFilter;
