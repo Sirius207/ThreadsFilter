@@ -153,6 +153,24 @@
           </div>
 
           <div class="input-group">
+            <label for="blurAmount">
+              <span data-i18n="blurAmount">Blur Amount:</span>
+              <span id="blurValue">0px</span>
+            </label>
+            <input
+              type="range"
+              id="blurAmount"
+              min="0"
+              max="3"
+              step="0.5"
+              value="0"
+            />
+            <p class="setting-description" data-i18n="blurAmountDescription">
+              Apply blur filter to filtered comment text (0px to 3px)
+            </p>
+          </div>
+
+          <div class="input-group">
             <label for="maxFollowers" data-i18n="maximumFollowers"
               >Maximum Followers:</label
             >

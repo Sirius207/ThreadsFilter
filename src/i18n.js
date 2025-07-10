@@ -82,10 +82,13 @@ class I18n {
         clickToShowDescription:
           "When enabled, filtered comments require a click to show instead of hover",
         resetToDefaults: "Reset to Defaults",
-        hideAnimation: "Hide Animation",
+        hideAnimation: "Hide Animation (Beta)",
         hideAnimationDescription:
           "When enabled, hidden comments use a fade-out animation; when disabled, they disappear instantly",
         followers: "followers",
+        blurAmount: "Blur Amount:",
+        blurAmountDescription:
+          "Apply blur filter to filtered comment text (0px to 3px)",
       },
       zh_TW: {
         popupTitle: "Threads 留言過濾器",
@@ -117,10 +120,12 @@ class I18n {
         clickToShowDescription:
           "啟用後，已過濾的留言需要點擊才能顯示，而不是懸停",
         resetToDefaults: "重設為預設值",
-        hideAnimation: "隱藏動畫",
+        hideAnimation: "隱藏動畫 (Beta)",
         hideAnimationDescription:
           "啟用時，隱藏的留言會使用漸進消失動畫；停用時會直接消失",
         followers: "位粉絲",
+        blurAmount: "模糊程度：",
+        blurAmountDescription: "對已過濾留言文字套用模糊效果 (0px 到 3px)",
       },
       ja: {
         popupTitle: "Threads コメントフィルター",
@@ -153,10 +158,13 @@ class I18n {
         clickToShowDescription:
           "有効にすると、フィルターされたコメントはホバーではなくクリックで表示されます",
         resetToDefaults: "デフォルトにリセット",
-        hideAnimation: "非表示アニメーション",
+        hideAnimation: "非表示アニメーション (Beta)",
         hideAnimationDescription:
-          "有効にすると、非表示のコメントはフェードアウトアニメーションを使用；無効にすると即座に消えます",
+          "有効にすると、非表示のコメントはフェードアウトアニメーションを使用します；無効にすると即座に消えます",
         followers: "フォロワー",
+        blurAmount: "ぼかし量：",
+        blurAmountDescription:
+          "フィルターされたコメントテキストにぼかしフィルターを適用 (0px から 3px)",
       },
     };
   }

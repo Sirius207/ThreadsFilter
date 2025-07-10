@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Blur Effect for Filtered Comments**
+  - New blur slider in Advanced Settings (0px to 3px)
+  - Apply blur filter to filtered comment text spans
+  - Real-time blur effect updates when adjusting slider
+  - Proper cleanup of blur effects when removing filters
+  - Internationalization support for blur settings
+
 ### Fixed
 
 - **Button Flickering Issue**

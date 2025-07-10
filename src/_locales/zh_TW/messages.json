@@ -130,5 +130,13 @@
   "followers": {
     "message": "位粉絲",
     "description": "Text for follower count display"
+  },
+  "blurAmount": {
+    "message": "模糊程度：",
+    "description": "Label for blur amount slider"
+  },
+  "blurAmountDescription": {
+    "message": "對已過濾留言文字套用模糊效果 (0px 到 3px)",
+    "description": "Description for blur amount setting"
   }
 }

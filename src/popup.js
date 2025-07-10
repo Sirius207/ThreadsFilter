@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS = {
   hideDefaultAvatars: true,
   debug: false,
   grayscaleOpacity: 0.1,
+  blurAmount: 0,
   clickToShow: false,
   hideAnimation: false,
 };
@@ -180,6 +181,17 @@ class PopupController {
       });
     }
 
+    // Blur amount slider
+    const blurSlider = document.getElementById("blurAmount");
+    const blurValue = document.getElementById("blurValue");
+    if (blurSlider && blurValue) {
+      blurSlider.addEventListener("input", (e) => {
+        this.settings.blurAmount = parseFloat(e.target.value);
+        blurValue.textContent = this.settings.blurAmount.toFixed(1) + "px";
+        this.saveSettings();
+      });
+    }
+
     // Reset and refresh buttons
     const resetSettingsBtn = document.getElementById("resetSettings");
     const refreshStatsBtn = document.getElementById("refreshStats");
@@ -268,6 +280,14 @@ class PopupController {
     if (opacitySlider && opacityValue) {
       opacitySlider.value = this.settings.grayscaleOpacity;
       opacityValue.textContent = this.settings.grayscaleOpacity.toFixed(2);
+    }
+
+    // Update blur amount slider
+    const blurSlider = document.getElementById("blurAmount");
+    const blurValue = document.getElementById("blurValue");
+    if (blurSlider && blurValue) {
+      blurSlider.value = this.settings.blurAmount;
+      blurValue.textContent = this.settings.blurAmount.toFixed(1) + "px";
     }
 
     // Set Advanced Settings initial state (collapsed by default)

@@ -29,6 +29,22 @@
   opacity: 0.8;
 }
 
+/* Blur effect for text spans using CSS custom property */
+.threads-filter-grayscale span[style*="filter: blur"] {
+  filter: blur(var(--threads-filter-blur, 0px));
+  transition: filter 0.3s ease;
+}
+
+/* Hover mode - remove blur on hover (only when NOT in click mode) */
+.threads-filter-grayscale:not(.click-mode):hover span[style*="filter: blur"] {
+  filter: blur(0px) !important;
+}
+
+/* Click mode - remove blur when showing */
+.threads-filter-grayscale.click-mode.showing span[style*="filter: blur"] {
+  filter: blur(0px) !important;
+}
+
 /* Hidden comments with smooth animation */
 .threads-filter-hidden {
   overflow: hidden;

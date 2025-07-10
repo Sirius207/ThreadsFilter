@@ -130,5 +130,13 @@
   "followers": {
     "message": "フォロワー",
     "description": "Text for follower count display"
+  },
+  "blurAmount": {
+    "message": "ぼかし量：",
+    "description": "Label for blur amount slider"
+  },
+  "blurAmountDescription": {
+    "message": "フィルターされたコメントテキストにぼかしフィルターを適用 (0px から 3px)",
+    "description": "Description for blur amount setting"
   }
 }

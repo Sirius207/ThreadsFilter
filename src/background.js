@@ -43,6 +43,7 @@ class BackgroundService {
       hideDefaultAvatars: true,
       debug: false,
       grayscaleOpacity: 0.1,
+      blurAmount: 0,
     };
 
     try {

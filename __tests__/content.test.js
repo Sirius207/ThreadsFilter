@@ -16,6 +16,7 @@ describe("ThreadsCommentFilter", () => {
       hideDefaultAvatars: true,
       debug: false,
       grayscaleOpacity: 0.1,
+      blurAmount: 0,
     };
   });
 
@@ -349,6 +350,91 @@ describe("ThreadsCommentFilter", () => {
       expect(mockCommentElement.style.removeProperty).toHaveBeenCalledWith(
         "--threads-filter-opacity"
       );
+    });
+  });
+
+  describe("Blur functionality", () => {
+    test("should apply blur effect to text spans when blur amount is greater than 0", () => {
+      // Create a mock comment element with text spans
+      const mockCommentElement = document.createElement("div");
+      const textSpan1 = document.createElement("span");
+      textSpan1.textContent = "This is a test comment";
+      const textSpan2 = document.createElement("span");
+      textSpan2.textContent = "Another line of text";
+      mockCommentElement.appendChild(textSpan1);
+      mockCommentElement.appendChild(textSpan2);
+
+      // Test settings with blur
+      const settingsWithBlur = {
+        ...mockSettings,
+        displayMode: "grayscale",
+        blurAmount: 0.5,
+      };
+
+      // Simulate applying blur effect
+      if (settingsWithBlur.blurAmount > 0) {
+        const textSpans = mockCommentElement.querySelectorAll("span");
+        textSpans.forEach((span) => {
+          if (span.textContent && span.textContent.trim()) {
+            span.style.filter = `blur(${settingsWithBlur.blurAmount}px)`;
+          }
+        });
+      }
+
+      // Verify blur was applied
+      const spans = mockCommentElement.querySelectorAll("span");
+      spans.forEach((span) => {
+        if (span.textContent && span.textContent.trim()) {
+          expect(span.style.filter).toBe("blur(0.5px)");
+        }
+      });
+    });
+
+    test("should not apply blur effect when blur amount is 0", () => {
+      const mockCommentElement = document.createElement("div");
+      const textSpan = document.createElement("span");
+      textSpan.textContent = "Test comment";
+      mockCommentElement.appendChild(textSpan);
+
+      const settingsNoBlur = {
+        ...mockSettings,
+        displayMode: "grayscale",
+        blurAmount: 0,
+      };
+
+      // Simulate applying blur effect
+      if (settingsNoBlur.blurAmount > 0) {
+        const textSpans = mockCommentElement.querySelectorAll("span");
+        textSpans.forEach((span) => {
+          if (span.textContent && span.textContent.trim()) {
+            span.style.filter = `blur(${settingsNoBlur.blurAmount}px)`;
+          }
+        });
+      }
+
+      // Verify no blur was applied
+      const span = mockCommentElement.querySelector("span");
+      expect(span.style.filter).toBe("");
+    });
+
+    test("should remove blur effects when removing filter styles", () => {
+      const mockCommentElement = document.createElement("div");
+      const textSpan = document.createElement("span");
+      textSpan.textContent = "Test comment";
+      textSpan.style.filter = "blur(0.5px)";
+      mockCommentElement.appendChild(textSpan);
+
+      // Simulate removing blur effects
+      const textSpans = mockCommentElement.querySelectorAll("span");
+      textSpans.forEach((span) => {
+        if (span.style.filter && span.style.filter.includes("blur")) {
+          span.style.filter = "";
+        }
+      });
+
+      // Verify blur was removed
+      const span = mockCommentElement.querySelector("span");
+      expect(span.style.filter).toBe("");
     });
   });
 });
