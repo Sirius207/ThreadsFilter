@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Blur Effect Logic**
+  - Blur now only resets to 0 on hover (when click-to-show is off) or on click (when click-to-show is on)
+  - Prevented blur from resetting on hover when click-to-show is enabled
+  - Refactored CSS to use custom property for blur, ensuring correct interaction with click/hover
+  - Confirmed JS does not interfere with blur hover/click logic
+  - Cleaned up duplicate and legacy CSS rules
+
 - **Button Flickering Issue**
   - Fixed "Refresh Stats" button flickering caused by frequent updates
   - Added debouncing mechanism to prevent concurrent stats updates
