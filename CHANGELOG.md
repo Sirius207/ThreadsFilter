@@ -5,6 +5,50 @@ All notable changes to the Threads Comment Filter extension will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Button Flickering Issue**
+  - Fixed "Refresh Stats" button flickering caused by frequent updates
+  - Added debouncing mechanism to prevent concurrent stats updates
+  - Reduced automatic stats update frequency from 2 seconds to 5 seconds
+  - Button now only shows "Updating..." state when manually clicked
+
+- **Mode Switching Delays**
+  - Fixed delay when switching from hide mode to grayscale mode
+  - Implemented immediate filter application for settings changes
+  - Created `applyFiltersImmediate()` method to bypass debouncing for settings updates
+  - Improved style cleanup when switching between display modes
+
+- **Hide Animation Mode Issues**
+  - Fixed hidden comments flickering in and out when hideAnimation is enabled
+  - Resolved conflicts between Threads DOM updates and filter application
+  - Improved style management for hideAnimation mode
+  - Added proper cleanup for all hide animation styles during mode transitions
+
+### Changed
+
+- **Performance Improvements**
+  - Added debouncing for filter application to prevent conflicts with Threads DOM updates
+  - Implemented smarter filter application logic with immediate execution for settings changes
+  - Enhanced resource management with proper cleanup of debounce timers
+  - Improved stability of hide animation mode
+
+- **Code Architecture**
+  - Separated debounced and immediate filter application logic
+  - Added comprehensive style cleanup for all display modes
+  - Enhanced error handling for content script communication
+  - Improved memory management with proper timer cleanup
+
+### Technical Details
+
+- Added `applyFiltersImmediate()` method for instant filter application
+- Implemented 1-second debouncing for filter application to prevent DOM conflicts
+- Enhanced `applyFilterStyle()` method with complete style cleanup
+- Added proper cleanup methods for both popup and content script timers
+- Improved handling of Threads' frequent GraphQL requests and DOM updates
+
 ## [1.0.2] - 2025-07-07
 
 ### Added

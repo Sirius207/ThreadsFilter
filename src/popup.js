@@ -22,6 +22,9 @@ class PopupController {
       followerFilteredCount: 0,
       avatarFilteredCount: 0,
     };
+    this.isUpdating = false; // Add flag to prevent concurrent updates
+    this.lastStatsUpdate = 0; // Track last stats update time
+    this.statsUpdateDebounce = null; // Debounce timer
     this.init();
   }
 
@@ -43,7 +46,7 @@ class PopupController {
     // Set up periodic stats updates
     this.statsUpdateInterval = setInterval(() => {
       this.requestStats();
-    }, 2000); // Update every 2 seconds
+    }, 5000); // Update every 5 seconds instead of 2 seconds
   }
 
   async loadSettings() {
@@ -126,14 +129,12 @@ class PopupController {
 
     // Follower count inputs
     document.getElementById("minFollowers").addEventListener("input", (e) => {
-      const value = parseInt(e.target.value);
-      this.settings.minFollowers = isNaN(value) ? null : value;
+      this.settings.minFollowers = parseInt(e.target.value) || null;
       this.saveSettings();
     });
 
     document.getElementById("maxFollowers").addEventListener("input", (e) => {
-      const value = parseInt(e.target.value);
-      this.settings.maxFollowers = isNaN(value) ? null : value;
+      this.settings.maxFollowers = parseInt(e.target.value) || null;
       this.saveSettings();
     });
 
@@ -150,19 +151,19 @@ class PopupController {
         this.saveSettings();
       });
 
-    // Debug mode toggle
+    // Debug mode
     document.getElementById("debugMode").addEventListener("change", (e) => {
       this.settings.debug = e.target.checked;
       this.saveSettings();
     });
 
-    // Click to show toggle
+    // Click to show setting
     document.getElementById("clickToShow").addEventListener("change", (e) => {
       this.settings.clickToShow = e.target.checked;
       this.saveSettings();
     });
 
-    // Hide animation toggle
+    // Hide animation setting
     document.getElementById("hideAnimation").addEventListener("change", (e) => {
       this.settings.hideAnimation = e.target.checked;
       this.saveSettings();
@@ -171,17 +172,15 @@ class PopupController {
     // Grayscale opacity slider
     const opacitySlider = document.getElementById("grayscaleOpacity");
     const opacityValue = document.getElementById("opacityValue");
-
     if (opacitySlider && opacityValue) {
       opacitySlider.addEventListener("input", (e) => {
-        const value = parseFloat(e.target.value);
-        this.settings.grayscaleOpacity = value;
-        opacityValue.textContent = value.toFixed(1);
+        this.settings.grayscaleOpacity = parseFloat(e.target.value);
+        opacityValue.textContent = this.settings.grayscaleOpacity.toFixed(1);
         this.saveSettings();
       });
     }
 
-    // Buttons
+    // Reset and refresh buttons
     const resetSettingsBtn = document.getElementById("resetSettings");
     const refreshStatsBtn = document.getElementById("refreshStats");
 
@@ -197,7 +196,7 @@ class PopupController {
     });
 
     refreshStatsBtn.addEventListener("click", () => {
-      this.requestStats();
+      this.requestStats(true); // Force update when button is clicked
     });
 
     // Advanced Settings toggle
@@ -289,10 +288,41 @@ class PopupController {
     this.updateUI();
   }
 
-  async requestStats() {
+  // 提取重置 stats 並更新 UI 的邏輯
+  _resetStatsAndUI() {
+    this.stats = {
+      totalCount: 0,
+      filteredCount: 0,
+      followerFilteredCount: 0,
+      avatarFilteredCount: 0,
+    };
+    this.updateStatsDisplay();
+  }
+
+  async requestStats(forceUpdate = false) {
+    // Prevent concurrent updates
+    if (this.isUpdating && !forceUpdate) {
+      return;
+    }
+
+    // Debounce rapid requests (within 500ms)
+    const now = Date.now();
+    if (!forceUpdate && now - this.lastStatsUpdate < 500) {
+      if (this.statsUpdateDebounce) {
+        clearTimeout(this.statsUpdateDebounce);
+      }
+      this.statsUpdateDebounce = setTimeout(() => {
+        this.requestStats(forceUpdate);
+      }, 500);
+      return;
+    }
+
+    this.isUpdating = true;
+    this.lastStatsUpdate = now;
+
     try {
       const refreshBtn = document.getElementById("refreshStats");
-      if (refreshBtn) {
+      if (refreshBtn && forceUpdate) {
         refreshBtn.textContent = window.i18n.getMessage("updating");
         refreshBtn.disabled = true;
       }
@@ -305,33 +335,61 @@ class PopupController {
         tab &&
         (tab.url.includes("threads.net") || tab.url.includes("threads.com"))
       ) {
-        const response = await chrome.tabs.sendMessage(tab.id, {
-          action: "getStats",
-        });
-        if (response) {
-          if (this.settings.debug) {
-            console.log("Popup: Received stats from content script:", response);
+        try {
+          const response = await chrome.tabs.sendMessage(tab.id, {
+            action: "getStats",
+          });
+          if (response) {
+            if (this.settings.debug) {
+              console.log(
+                "Popup: Received stats from content script:",
+                response
+              );
+            }
+            this.stats = response;
+            this.updateStatsDisplay();
+            if (this.settings.debug) {
+              console.log("Popup: Stats updated:", this.stats);
+            }
+          } else if (this.settings.debug) {
+            console.log("Popup: No response from content script");
           }
-          this.stats = response;
-          this.updateStatsDisplay();
-          if (this.settings.debug) {
-            console.log("Popup: Stats updated:", this.stats);
+        } catch (messageError) {
+          if (
+            messageError.message &&
+            messageError.message.includes("Receiving end does not exist")
+          ) {
+            if (this.settings.debug) {
+              console.log(
+                "Popup: Content script not available, cannot get stats"
+              );
+            }
+            // Reset stats to show that we can't get them
+            this._resetStatsAndUI();
+          } else {
+            if (this.settings.debug) {
+              console.log(
+                "Popup: Error getting stats from content script:",
+                messageError
+              );
+            }
           }
-        } else if (this.settings.debug) {
-          console.log("Popup: No response from content script");
         }
       } else {
         if (this.settings.debug) {
           console.log("Popup: Not on a Threads page, cannot get stats");
         }
+        // Reset stats when not on a Threads page
+        this._resetStatsAndUI();
       }
     } catch (error) {
       if (this.settings.debug) {
         console.log("Popup: Could not get stats from content script:", error);
       }
     } finally {
+      this.isUpdating = false;
       const refreshBtn = document.getElementById("refreshStats");
-      if (refreshBtn) {
+      if (refreshBtn && forceUpdate) {
         refreshBtn.textContent = window.i18n.getMessage("refreshStats");
         refreshBtn.disabled = false;
       }
@@ -399,6 +457,9 @@ class PopupController {
   cleanup() {
     if (this.statsUpdateInterval) {
       clearInterval(this.statsUpdateInterval);
+    }
+    if (this.statsUpdateDebounce) {
+      clearTimeout(this.statsUpdateDebounce);
     }
   }
 }
