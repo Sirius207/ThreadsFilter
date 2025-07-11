@@ -1405,16 +1405,6 @@ class ThreadsCommentFilter {
     );
 
     threadsFollowerElements.forEach((element) => {
-      // const beforeDisplay = window.getComputedStyle(element).display;
-      // this.log(
-      //   `Threads Filter: Element ${
-      //     index + 1
-      //   } - before: display = "${beforeDisplay}"`
-      // );
-      // this.log(
-      //   `Threads Filter: Element ${index + 1} - text: "${element.textContent}"`
-      // );
-
       if (this.settings.showFollowerCount) {
         // Show the element
         element.style.setProperty("display", "", "important");
@@ -1426,15 +1416,6 @@ class ThreadsCommentFilter {
         element.style.setProperty("visibility", "hidden", "important");
         element.style.setProperty("opacity", "0", "important");
       }
-
-      // const afterDisplay = window.getComputedStyle(element).display;
-      // this.log(
-      //   `Threads Filter: Element ${
-      //     index + 1
-      //   } - after: display = "${afterDisplay}", should be ${
-      //     this.settings.showFollowerCount ? "visible" : "hidden"
-      //   }`
-      // );
     });
 
     // Additional check: verify we're not affecting time elements
@@ -1444,14 +1425,6 @@ class ThreadsCommentFilter {
     this.log(
       `Threads Filter: Found ${timeElements.length} time elements (should remain unaffected)`
     );
-    // timeElements.forEach((element) => {
-    //   const display = window.getComputedStyle(element).display;
-    //   this.log(
-    //     `Threads Filter: Time element ${
-    //       index + 1
-    //     } - display = "${display}" (should be visible)`
-    //   );
-    // });
   }
 
   shouldFilterComment(commentElement) {
