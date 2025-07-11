@@ -2161,7 +2161,7 @@ class ThreadsCommentFilter {
         comment.classList.contains("threads-filter-grayscale") ||
         comment.style.display === "none"
       ) {
-        // 檢查這個評論是否應該被隱藏
+        // Check if this comment should be hidden
         const filterResult = this.shouldFilterComment(comment);
         const shouldBeHidden = filterResult.shouldFilter;
         const username = this.extractAuthorInfo(comment)?.username || "unknown";
@@ -2170,7 +2170,7 @@ class ThreadsCommentFilter {
           `ThreadsCommentFilter: Checking @${username}, should be hidden: ${shouldBeHidden}, reason: ${filterResult.reason || "none"}`
         );
 
-        // 只有不該被隱藏的評論才移除隱藏樣式
+        // Only remove filter styles from comments that should be visible
         if (!shouldBeHidden) {
           this.log(
             `ThreadsCommentFilter: Cleaning up hidden comment @${username}, classes: [${Array.from(comment.classList).join(", ")}], display: ${comment.style.display}`
