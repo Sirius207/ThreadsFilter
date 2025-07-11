@@ -90,16 +90,16 @@
   border-radius: 10px;
   pointer-events: none;
   z-index: 10;
-  /* 確保標籤不會影響父元素的高度和寬度 */
+  /* Ensure the label does not affect the parent element's height and width */
   transform: translateZ(0);
-  /* 防止標籤超出容器邊界 */
+  /* Prevent the label from overflowing the container boundaries */
   max-width: calc(100% - 8px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  /* 確保標籤不會擠壓到內容 */
+  /* Ensure the label does not squash the content */
   line-height: 1.2;
-  /* 添加陰影讓標籤更明顯但不會影響佈局 */
+  /* Add a shadow to make the label more prominent without affecting layout */
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
@@ -125,7 +125,7 @@
     padding: 1px 3px;
     top: 2px;
     right: 2px;
-    /* 在移動設備上進一步減少空間佔用 */
+    /* Further reduce space usage on mobile devices */
     max-width: calc(100% - 4px);
     line-height: 1.1;
   }
@@ -160,7 +160,7 @@
   .threads-filter-grayscale::before {
     background: rgba(255, 255, 255, 0.15);
     color: #b0b3b8;
-    /* 深色模式下的陰影調整 */
+    /* Shadow adjustment for dark mode */
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
 }
