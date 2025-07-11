@@ -76,9 +76,6 @@
 /* Enhanced styling for filtered comments in grayscale mode */
 .threads-filter-grayscale {
   position: relative;
-  border-left: 3px solid #e4e6ea;
-  padding-left: 8px;
-  margin-left: 4px;
 }
 
 .threads-filter-grayscale::before {
@@ -88,10 +85,22 @@
   right: 4px;
   background: rgba(0, 0, 0, 0.1);
   color: #65676b;
-  font-size: 10px;
-  padding: 2px 6px;
+  font-size: 9px;
+  padding: 1px 4px;
   border-radius: 10px;
   pointer-events: none;
+  z-index: 10;
+  /* Ensure the label does not affect the parent element's height and width */
+  transform: translateZ(0);
+  /* Prevent the label from overflowing the container boundaries */
+  max-width: calc(100% - 8px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* Ensure the label does not squash the content */
+  line-height: 1.2;
+  /* Add a shadow to make the label more prominent without affecting layout */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* Smooth transitions for all filter effects */
@@ -112,8 +121,13 @@
   }
 
   .threads-filter-grayscale::before {
-    font-size: 9px;
-    padding: 1px 4px;
+    font-size: 8px;
+    padding: 1px 3px;
+    top: 2px;
+    right: 2px;
+    /* Further reduce space usage on mobile devices */
+    max-width: calc(100% - 4px);
+    line-height: 1.1;
   }
 }
 
@@ -121,7 +135,6 @@
 @media (prefers-contrast: high) {
   .threads-filter-grayscale {
     filter: contrast(150%) grayscale(100%);
-    border-left-color: #000;
   }
 
   .threads-follower-count {
@@ -144,13 +157,11 @@
     color: #b0b3b8 !important;
   }
 
-  .threads-filter-grayscale {
-    border-left-color: #4e4f50;
-  }
-
   .threads-filter-grayscale::before {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.15);
     color: #b0b3b8;
+    /* Shadow adjustment for dark mode */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
 }
 

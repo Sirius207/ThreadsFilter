@@ -373,6 +373,7 @@ class ThreadsCommentFilter {
     this.lastStatsUpdate = 0; // Track last stats update time
     this.filterApplyDebounce = null; // Debounce timer for filter application
     this.lastFilterApply = 0; // Track last filter application time
+    this.lastCleanupTime = 0; // Track last cleanup time
     this.init();
   }
 
@@ -549,18 +550,58 @@ class ThreadsCommentFilter {
     // Create new observer for dynamic content
     this.observer = new MutationObserver((mutations) => {
       let shouldProcess = false;
+      let hasSignificantChanges = false;
+
       mutations.forEach((mutation) => {
         if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-          shouldProcess = true;
+          // Check if the added nodes are our own follower count elements
+          const hasOurElements = Array.from(mutation.addedNodes).some(
+            (node) => {
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                return (
+                  node.classList.contains("threads-follower-count") ||
+                  node.querySelector(".threads-follower-count") ||
+                  node.classList.contains("threads-filter-processed") ||
+                  node.querySelector(".threads-filter-processed")
+                );
+              }
+              return false;
+            }
+          );
+
+          // Check for significant changes (new comments, not just our own elements)
+          const hasNewComments = Array.from(mutation.addedNodes).some(
+            (node) => {
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                // Look for potential comment containers
+                return (
+                  node.querySelector('div[data-pressable-container="true"]') ||
+                  node.querySelector('div[role="article"]') ||
+                  node.querySelector('a[href*="/@"]')
+                );
+              }
+              return false;
+            }
+          );
+
+          // Only process if we don't have our own elements and have significant changes
+          if (!hasOurElements && hasNewComments) {
+            shouldProcess = true;
+            hasSignificantChanges = true;
+          } else if (!hasOurElements) {
+            // Minor changes, still process but with lower priority
+            shouldProcess = true;
+          }
         }
       });
 
       if (shouldProcess) {
-        // Debounce processing
+        // Debounce processing with different delays based on change type
         clearTimeout(this.processTimeout);
+        const delay = hasSignificantChanges ? 300 : 1000; // Faster for significant changes
         this.processTimeout = setTimeout(() => {
           this.processExistingComments();
-        }, 500);
+        }, delay);
       }
     });
 
@@ -931,7 +972,7 @@ class ThreadsCommentFilter {
         // Cache the result
         this.followerCache.set(username, followerCount);
 
-        // Update the comment data
+        // Update the comment data - preserve existing avatar and verification status
         const data = commentElement.dataset.threadsFilterData;
         if (data) {
           const commentData = JSON.parse(data);
@@ -941,15 +982,17 @@ class ThreadsCommentFilter {
         }
 
         // Update the display using addFollowerCountDisplay to respect current settings
+        // Preserve the original avatar and verification status from the comment data
+        const originalData = data ? JSON.parse(data) : {};
         this.addFollowerCountDisplay(commentElement, {
           username: username,
           followerCount: followerCount,
-          isVerified: false,
-          hasDefaultAvatar: false,
+          isVerified: originalData.isVerified || false,
+          hasDefaultAvatar: originalData.hasDefaultAvatar || false,
         });
 
-        // Re-apply filters
-        this.applyFiltersImmediate();
+        // Only re-apply filters for this specific comment, don't trigger full reprocessing
+        this._reapplyFiltersForComment(commentElement);
 
         this.log(
           `Successfully fetched follower count for @${username}: ${followerCount}`
@@ -1305,6 +1348,7 @@ class ThreadsCommentFilter {
     });
 
     // Apply changes only to comments that need state changes
+    let stateChanges = 0;
     processedComments.forEach((comment) => {
       const shouldBeFiltered = commentsToFilter.has(comment);
       const isCurrentlyFiltered = this.filteredComments.has(comment);
@@ -1313,10 +1357,12 @@ class ThreadsCommentFilter {
         // Comment should be filtered but isn't currently filtered
         this.filteredComments.add(comment);
         this.applyFilterStyle(comment);
+        stateChanges++;
       } else if (!shouldBeFiltered && isCurrentlyFiltered) {
         // Comment should be shown but is currently filtered
         this.filteredComments.delete(comment);
         this.removeFilterStyle(comment);
+        stateChanges++;
       } else if (shouldBeFiltered && isCurrentlyFiltered) {
         // Comment is already filtered, but we need to re-apply the style in case display mode changed
         this.applyFilterStyle(comment);
@@ -1329,7 +1375,7 @@ class ThreadsCommentFilter {
     this.avatarFilteredComments = newAvatarFiltered;
 
     this.log(
-      `Threads Filter: Applied filters to ${commentsToFilter.size} comments out of ${processedComments.length} total`
+      `Threads Filter: Applied filters to ${commentsToFilter.size} comments out of ${processedComments.length} total (${stateChanges} state changes)`
     );
     this.log(
       `Threads Filter: Current filtered comments set size: ${this.filteredComments.size}`
@@ -1358,17 +1404,7 @@ class ThreadsCommentFilter {
       `Threads Filter: showFollowerCount setting is: ${this.settings.showFollowerCount}`
     );
 
-    threadsFollowerElements.forEach((element, index) => {
-      const beforeDisplay = window.getComputedStyle(element).display;
-      this.log(
-        `Threads Filter: Element ${
-          index + 1
-        } - before: display = "${beforeDisplay}"`
-      );
-      this.log(
-        `Threads Filter: Element ${index + 1} - text: "${element.textContent}"`
-      );
-
+    threadsFollowerElements.forEach((element) => {
       if (this.settings.showFollowerCount) {
         // Show the element
         element.style.setProperty("display", "", "important");
@@ -1380,15 +1416,6 @@ class ThreadsCommentFilter {
         element.style.setProperty("visibility", "hidden", "important");
         element.style.setProperty("opacity", "0", "important");
       }
-
-      const afterDisplay = window.getComputedStyle(element).display;
-      this.log(
-        `Threads Filter: Element ${
-          index + 1
-        } - after: display = "${afterDisplay}", should be ${
-          this.settings.showFollowerCount ? "visible" : "hidden"
-        }`
-      );
     });
 
     // Additional check: verify we're not affecting time elements
@@ -1398,14 +1425,6 @@ class ThreadsCommentFilter {
     this.log(
       `Threads Filter: Found ${timeElements.length} time elements (should remain unaffected)`
     );
-    timeElements.forEach((element, index) => {
-      const display = window.getComputedStyle(element).display;
-      this.log(
-        `Threads Filter: Time element ${
-          index + 1
-        } - display = "${display}" (should be visible)`
-      );
-    });
   }
 
   shouldFilterComment(commentElement) {
@@ -1417,14 +1436,14 @@ class ThreadsCommentFilter {
 
     const commentData = JSON.parse(data);
 
-    // Check follower count filters
+    // Check follower count filters - filter if followers is null or below minimum
     if (
       this.settings.minFollowers !== null &&
       (commentData.followers === null ||
         commentData.followers < this.settings.minFollowers)
     ) {
       this.log(
-        `Threads Filter: Comment filtered due to min followers (${commentData.followers} < ${this.settings.minFollowers})`
+        `Threads Filter: Comment by @${commentData.username} filtered due to min followers (${commentData.followers} < ${this.settings.minFollowers})`
       );
       return { shouldFilter: true, reason: "follower" };
     }
@@ -1517,6 +1536,12 @@ class ThreadsCommentFilter {
   }
 
   applyFilterStyle(commentElement) {
+    const username =
+      this.extractAuthorInfo(commentElement)?.username || "unknown";
+    this.log(
+      `Threads Filter: Applying filter style to @${username}, mode: ${this.settings.displayMode}`
+    );
+
     if (this.settings.displayMode === "hide") {
       if (this.settings.hideAnimation) {
         // Use a more stable approach for hide animation
@@ -1614,6 +1639,10 @@ class ThreadsCommentFilter {
   }
 
   removeFilterStyle(commentElement) {
+    const username =
+      this.extractAuthorInfo(commentElement)?.username || "unknown";
+    this.log(`Threads Filter: Removing filter style from @${username}`);
+
     // Remove hiding animation classes first
     commentElement.classList.remove("threads-filter-hidden");
     commentElement.classList.remove("hiding");
@@ -2111,6 +2140,14 @@ class ThreadsCommentFilter {
 
   // Clean up any leftover hidden states from previous sessions
   cleanupHiddenStates() {
+    // Debounce cleanup operations to prevent excessive calls
+    const now = Date.now();
+    if (now - this.lastCleanupTime < 2000) {
+      // Only cleanup every 2 seconds
+      return;
+    }
+    this.lastCleanupTime = now;
+
     this.log("ThreadsCommentFilter: Cleaning up hidden states...");
 
     // Clean up processed comments with hidden states
@@ -2124,8 +2161,27 @@ class ThreadsCommentFilter {
         comment.classList.contains("threads-filter-grayscale") ||
         comment.style.display === "none"
       ) {
-        this.removeFilterStyle(comment);
-        cleanedProcessed++;
+        // Check if this comment should be hidden
+        const filterResult = this.shouldFilterComment(comment);
+        const shouldBeHidden = filterResult.shouldFilter;
+        const username = this.extractAuthorInfo(comment)?.username || "unknown";
+
+        this.log(
+          `ThreadsCommentFilter: Checking @${username}, should be hidden: ${shouldBeHidden}, reason: ${filterResult.reason || "none"}`
+        );
+
+        // Only remove filter styles from comments that should be visible
+        if (!shouldBeHidden) {
+          this.log(
+            `ThreadsCommentFilter: Cleaning up hidden comment @${username}, classes: [${Array.from(comment.classList).join(", ")}], display: ${comment.style.display}`
+          );
+          this.removeFilterStyle(comment);
+          cleanedProcessed++;
+        } else {
+          this.log(
+            `ThreadsCommentFilter: Keeping @${username} hidden (should be hidden)`
+          );
+        }
       }
     });
 
@@ -2141,9 +2197,11 @@ class ThreadsCommentFilter {
       }
     });
 
-    this.log(
-      `ThreadsCommentFilter: Cleaned up ${cleanedProcessed} processed comments and ${cleanedHidden} hidden elements`
-    );
+    if (cleanedProcessed > 0 || cleanedHidden > 0) {
+      this.log(
+        `ThreadsCommentFilter: Cleaned up ${cleanedProcessed} processed comments and ${cleanedHidden} hidden elements`
+      );
+    }
   }
 
   // Cleanup method to clear timers and observers
@@ -2294,6 +2352,56 @@ class ThreadsCommentFilter {
     });
 
     this.log("=== End Spacing Test ===");
+  }
+
+  // Private method to reapply filters for a specific comment without triggering full reprocessing
+  _reapplyFiltersForComment(commentElement) {
+    if (!this.settings.enableFilter) {
+      // When filter is disabled, show the comment
+      this.removeFilterStyle(commentElement);
+      return;
+    }
+
+    // Check if this comment should be filtered
+    const filterResult = this.shouldFilterComment(commentElement);
+    const shouldBeFiltered = filterResult.shouldFilter;
+    const isCurrentlyFiltered = this.filteredComments.has(commentElement);
+
+    // Only log and apply changes if the state actually needs to change
+    if (shouldBeFiltered && !isCurrentlyFiltered) {
+      // Comment should be filtered but isn't currently filtered
+      this.filteredComments.add(commentElement);
+      this.applyFilterStyle(commentElement);
+
+      // Update the filtered comments sets
+      if (filterResult.reason === "follower") {
+        this.followerFilteredComments.add(commentElement);
+      } else if (filterResult.reason === "avatar") {
+        this.avatarFilteredComments.add(commentElement);
+      }
+
+      this.log(
+        `Threads Filter: Comment state changed to filtered (${filterResult.reason})`
+      );
+    } else if (!shouldBeFiltered && isCurrentlyFiltered) {
+      // Comment should be shown but is currently filtered
+      this.filteredComments.delete(commentElement);
+      this.removeFilterStyle(commentElement);
+
+      // Remove from filtered sets
+      this.followerFilteredComments.delete(commentElement);
+      this.avatarFilteredComments.delete(commentElement);
+
+      this.log(`Threads Filter: Comment state changed to visible`);
+    } else if (shouldBeFiltered && isCurrentlyFiltered) {
+      // Comment is already filtered, but we need to re-apply the style in case display mode changed
+      this.applyFilterStyle(commentElement);
+      // Don't log this case as it's just a style refresh
+    }
+    // If comment state doesn't need to change, do nothing
+
+    // Send updated stats to popup
+    this.sendStatsToPopup();
   }
 }
 

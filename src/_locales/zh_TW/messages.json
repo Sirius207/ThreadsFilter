@@ -4,7 +4,7 @@
     "description": "Extension name"
   },
   "appDescription": {
-    "message": "根據追蹤者數量和頭像特徵過濾 Threads 留言，支援靈活的顯示模式",
+    "message": "根據粉絲數量和頭像特徵過濾 Threads 留言，支援靈活的顯示模式",
     "description": "Extension description"
   },
   "popupTitle": {
@@ -20,7 +20,7 @@
     "description": "Toggle label for enabling comment filtering"
   },
   "showFollowerCounts": {
-    "message": "顯示追蹤者數量",
+    "message": "顯示粉絲數量",
     "description": "Toggle label for showing follower counts"
   },
   "displayMode": {
@@ -36,11 +36,11 @@
     "description": "Radio button label for grayscale comments"
   },
   "followerCountFilter": {
-    "message": "追蹤者數量過濾",
+    "message": "粉絲數量過濾",
     "description": "Section header for follower count filter"
   },
   "minimumFollowers": {
-    "message": "最低追蹤者：",
+    "message": "最低粉絲：",
     "description": "Label for minimum followers input"
   },
   "avatarFilters": {
@@ -64,7 +64,7 @@
     "description": "Label for total filtered count"
   },
   "byFollowerCount": {
-    "message": "依追蹤者數量：",
+    "message": "依粉絲數量：",
     "description": "Label for follower count filtered"
   },
   "byDefaultAvatars": {
@@ -92,7 +92,7 @@
     "description": "Description for grayscale opacity setting"
   },
   "maximumFollowers": {
-    "message": "最多追蹤者：",
+    "message": "最多粉絲：",
     "description": "Label for maximum followers input"
   },
   "hideVerifiedAccounts": {
