@@ -1470,7 +1470,7 @@ class ThreadsCommentFilter {
         commentData.followers < this.settings.minFollowers)
     ) {
       this.log(
-        `Threads Filter: Comment filtered due to min followers (${commentData.followers} < ${this.settings.minFollowers})`
+        `Threads Filter: Comment by @${commentData.username} filtered due to min followers (${commentData.followers} < ${this.settings.minFollowers})`
       );
       return { shouldFilter: true, reason: "follower" };
     }
@@ -1563,6 +1563,12 @@ class ThreadsCommentFilter {
   }
 
   applyFilterStyle(commentElement) {
+    const username =
+      this.extractAuthorInfo(commentElement)?.username || "unknown";
+    this.log(
+      `Threads Filter: Applying filter style to @${username}, mode: ${this.settings.displayMode}`
+    );
+
     if (this.settings.displayMode === "hide") {
       if (this.settings.hideAnimation) {
         // Use a more stable approach for hide animation
@@ -1660,6 +1666,10 @@ class ThreadsCommentFilter {
   }
 
   removeFilterStyle(commentElement) {
+    const username =
+      this.extractAuthorInfo(commentElement)?.username || "unknown";
+    this.log(`Threads Filter: Removing filter style from @${username}`);
+
     // Remove hiding animation classes first
     commentElement.classList.remove("threads-filter-hidden");
     commentElement.classList.remove("hiding");
@@ -2178,8 +2188,27 @@ class ThreadsCommentFilter {
         comment.classList.contains("threads-filter-grayscale") ||
         comment.style.display === "none"
       ) {
-        this.removeFilterStyle(comment);
-        cleanedProcessed++;
+        // 檢查這個評論是否應該被隱藏
+        const filterResult = this.shouldFilterComment(comment);
+        const shouldBeHidden = filterResult.shouldFilter;
+        const username = this.extractAuthorInfo(comment)?.username || "unknown";
+
+        this.log(
+          `ThreadsCommentFilter: Checking @${username}, should be hidden: ${shouldBeHidden}, reason: ${filterResult.reason || "none"}`
+        );
+
+        // 只有不該被隱藏的評論才移除隱藏樣式
+        if (!shouldBeHidden) {
+          this.log(
+            `ThreadsCommentFilter: Cleaning up hidden comment @${username}, classes: [${Array.from(comment.classList).join(", ")}], display: ${comment.style.display}`
+          );
+          this.removeFilterStyle(comment);
+          cleanedProcessed++;
+        } else {
+          this.log(
+            `ThreadsCommentFilter: Keeping @${username} hidden (should be hidden)`
+          );
+        }
       }
     });
 
