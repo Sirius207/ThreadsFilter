@@ -5,7 +5,7 @@ All notable changes to the Threads Comment Filter extension will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.3] - 2025-07-11
 
 ### Added
 
@@ -16,7 +16,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Proper cleanup of blur effects when removing filters
   - Internationalization support for blur settings
 
+- **Traditional Chinese Translation Improvements**
+  - Changed "追蹤者" (followers) to "粉絲" (fans) in Traditional Chinese translations for better terminology consistency
+
 ### Fixed
+
+- **Infinite Loop Prevention**
+  - Fixed infinite loop issue in `cleanupHiddenStates`
+  - Improved state change tracking mechanism to prevent unnecessary re-filtering
+  - Optimized MutationObserver to distinguish between significant and minor DOM changes
+  - Added debouncing for cleanup operations to prevent excessive calls
+
+- **Comment Flickering Issues**
+  - Fixed comment flickering when follower count updates
+  - Added `_reapplyFiltersForComment` method to handle single comment filter updates
+  - Modified MutationObserver to ignore our own follower count elements
+  - Preserve avatar and verification status when updating follower count
+  - Prevent unnecessary reprocessing that caused `cleanupHiddenStates` to reset filter styles
+
+- **Layout and Visual Improvements**
+  - Removed left border and padding from filtered comments
+  - Optimized filtered label layout to prevent layout issues
+  - Improved visual presentation of filtered comments
+
+- **Duplicate Filtering Issues**
+  - Fixed issue where some comments were filtered multiple times before stabilizing
+  - Implemented batch update mechanism, changing immediate filtering after follower count retrieval to batch updates
+  - Added protection mechanism in `applyFiltersImmediate` to prevent duplicate calls within 500ms
+  - Optimized `processExistingComments` to use batch updates instead of immediate filtering
+  - Added `scheduleBatchFilterUpdate` method to merge multiple filtering operations
+  - Improved timeout management to ensure all debounce timers are properly cleaned up
 
 - **Blur Effect Logic**
   - Blur now only resets to 0 on hover (when click-to-show is off) or on click (when click-to-show is on)
@@ -43,19 +72,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Improved style management for hideAnimation mode
   - Added proper cleanup for all hide animation styles during mode transitions
 
+- Prevent infinite loop in comment filtering: Fixed an issue where comments that should remain hidden (e.g., due to low follower count) would repeatedly toggle between hidden and visible states. Now, the cleanup logic only removes filter styles from comments that should be visible, preventing unnecessary DOM updates and UI flicker.
+- Improved debug logging: Added detailed logs to track the filtering and cleanup process for each comment, including username, class state, and filtering reason. This makes it easier to debug and understand the comment filtering flow.
+
 ### Changed
 
 - **Performance Improvements**
-  - Added debouncing for filter application to prevent conflicts with Threads DOM updates
-  - Implemented smarter filter application logic with immediate execution for settings changes
-  - Enhanced resource management with proper cleanup of debounce timers
-  - Improved stability of hide animation mode
+  - Optimized filter application to reduce duplicate logging
+  - Added state change tracking to prevent unnecessary re-filtering
+  - Improved MutationObserver to distinguish between significant and minor changes
+  - Added debouncing for cleanup operations
+  - Optimized `_reapplyFiltersForComment` to only log actual state changes
+  - Reduced duplicate 'Comment filtered due to min followers' log messages
 
 - **Code Architecture**
+  - Extracted blur target span logic into helper method
   - Separated debounced and immediate filter application logic
   - Added comprehensive style cleanup for all display modes
   - Enhanced error handling for content script communication
   - Improved memory management with proper timer cleanup
+
+- **UI/UX Enhancements**
+  - Improved visual presentation of filtered comments
+  - Optimized layout to prevent visual issues
+  - Enhanced overall user experience
 
 ### Technical Details
 
