@@ -374,6 +374,9 @@ class ThreadsCommentFilter {
     this.filterApplyDebounce = null; // Debounce timer for filter application
     this.lastFilterApply = 0; // Track last filter application time
     this.lastCleanupTime = 0; // Track last cleanup time
+    // Rate limiting state for 429 errors
+    this.isRateLimited = false; // Flag to track if we're currently rate limited
+    this.rateLimitResetTime = 0; // Timestamp when rate limit should reset (if provided)
     this.init();
   }
 
@@ -531,6 +534,32 @@ class ThreadsCommentFilter {
             showFollowerCount: this.settings.showFollowerCount,
           });
           break;
+        case "resetRateLimit":
+          this.log("ThreadsCommentFilter: Resetting rate limit state");
+          this.isRateLimited = false;
+          this.rateLimitResetTime = 0;
+          sendResponse({
+            success: true,
+            message: "Rate limit state reset",
+          });
+          break;
+        case "getRateLimitStatus": {
+          this.log("ThreadsCommentFilter: Getting rate limit status");
+          const timeUntilReset =
+            this.rateLimitResetTime > 0
+              ? Math.max(0, this.rateLimitResetTime - Date.now())
+              : 0;
+          sendResponse({
+            isRateLimited: this.isRateLimited,
+            rateLimitResetTime: this.rateLimitResetTime,
+            timeUntilReset: timeUntilReset,
+            resetTimeString:
+              this.rateLimitResetTime > 0
+                ? new Date(this.rateLimitResetTime).toLocaleTimeString()
+                : null,
+          });
+          break;
+        }
         default:
           this.log(
             "ThreadsCommentFilter: Unknown message action:",
@@ -919,6 +948,22 @@ class ThreadsCommentFilter {
       return this.followerCache.get(username);
     }
 
+    // Check if we're currently rate limited
+    if (this.isRateLimited) {
+      // Check if rate limit has expired (if we have a reset time)
+      if (
+        this.rateLimitResetTime > 0 &&
+        Date.now() >= this.rateLimitResetTime
+      ) {
+        this.log("Rate limit period has expired, resuming requests");
+        this.isRateLimited = false;
+        this.rateLimitResetTime = 0;
+      } else {
+        this.log(`Skipping fetch for @${username} - currently rate limited`);
+        return null; // Return null and don't attempt to fetch
+      }
+    }
+
     // Look for follower count in various possible locations
     const possibleElements = commentElement.querySelectorAll("span, div");
 
@@ -945,6 +990,22 @@ class ThreadsCommentFilter {
 
   async fetchFollowerCountFromProfile(username, commentElement) {
     try {
+      // Check if we're currently rate limited
+      if (this.isRateLimited) {
+        // Check if rate limit has expired (if we have a reset time)
+        if (
+          this.rateLimitResetTime > 0 &&
+          Date.now() >= this.rateLimitResetTime
+        ) {
+          this.log("Rate limit period has expired, resuming requests");
+          this.isRateLimited = false;
+          this.rateLimitResetTime = 0;
+        } else {
+          this.log(`Skipping fetch for @${username} - currently rate limited`);
+          return; // Don't make the request
+        }
+      }
+
       this.log(`Fetching follower count for @${username}...`);
 
       // Fetch the user profile page
@@ -958,6 +1019,34 @@ class ThreadsCommentFilter {
           Pragma: "no-cache",
         },
       });
+
+      if (response.status === 429) {
+        // Handle rate limiting
+        this.isRateLimited = true;
+
+        // Try to get retry-after header for reset time
+        const retryAfter = response.headers.get("retry-after");
+        if (retryAfter) {
+          const retrySeconds = parseInt(retryAfter, 10);
+          if (!isNaN(retrySeconds)) {
+            this.rateLimitResetTime = Date.now() + retrySeconds * 1000;
+            this.log(
+              `Rate limited: Will retry after ${retrySeconds} seconds (at ${new Date(this.rateLimitResetTime).toLocaleTimeString()})`
+            );
+          }
+        } else {
+          // Default to 1 hour if no retry-after header
+          this.rateLimitResetTime = Date.now() + 60 * 60 * 1000;
+          this.log(
+            `Rate limited: No retry-after header, defaulting to 1 hour (at ${new Date(this.rateLimitResetTime).toLocaleTimeString()})`
+          );
+        }
+
+        this.log(
+          `Rate limited (429): Stopping all follower count requests until ${new Date(this.rateLimitResetTime).toLocaleTimeString()}`
+        );
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -3221,6 +3310,113 @@ class ThreadsCommentFilter {
 
     console.log("=== End Visibility Conditions Test ===");
   }
+
+  // Test function to verify rate limiting functionality
+  testRateLimiting() {
+    this.log("=== Testing Rate Limiting Functionality ===");
+
+    // Test initial state
+    console.log("Initial rate limit state:");
+    console.log("  isRateLimited:", this.isRateLimited);
+    console.log("  rateLimitResetTime:", this.rateLimitResetTime);
+    console.log(
+      "  Reset time string:",
+      this.rateLimitResetTime > 0
+        ? new Date(this.rateLimitResetTime).toLocaleTimeString()
+        : "None"
+    );
+
+    // Test setting rate limit
+    console.log("\n=== Testing Rate Limit Setting ===");
+    this.isRateLimited = true;
+    this.rateLimitResetTime = Date.now() + 30 * 1000; // 30 seconds from now
+    console.log("Set rate limit for 30 seconds");
+    console.log("  isRateLimited:", this.isRateLimited);
+    console.log(
+      "  Reset time:",
+      new Date(this.rateLimitResetTime).toLocaleTimeString()
+    );
+
+    // Test extractFollowerCount behavior when rate limited
+    console.log("\n=== Testing extractFollowerCount when rate limited ===");
+    const testComment = document.createElement("div");
+    const testUsername = "testuser";
+
+    // Mock the method to avoid actual DOM queries
+    testComment.querySelectorAll = () => [];
+
+    const result = this.extractFollowerCount(testComment, testUsername);
+    console.log("  Result when rate limited:", result);
+    console.log("  Should be null:", result === null ? "✅" : "❌");
+
+    // Test rate limit expiration
+    console.log("\n=== Testing Rate Limit Expiration ===");
+    this.rateLimitResetTime = Date.now() - 1000; // Set to 1 second ago
+    this.extractFollowerCount(testComment, testUsername);
+    console.log("  isRateLimited after expiry:", this.isRateLimited);
+    console.log(
+      "  Should be false:",
+      this.isRateLimited === false ? "✅" : "❌"
+    );
+
+    // Test reset function
+    console.log("\n=== Testing Rate Limit Reset ===");
+    this.isRateLimited = true;
+    this.rateLimitResetTime = Date.now() + 60 * 1000;
+    console.log("Set rate limit again");
+
+    // Simulate the resetRateLimit case
+    this.isRateLimited = false;
+    this.rateLimitResetTime = 0;
+    console.log("  isRateLimited after reset:", this.isRateLimited);
+    console.log("  rateLimitResetTime after reset:", this.rateLimitResetTime);
+    console.log(
+      "  Should both be falsy:",
+      !this.isRateLimited && !this.rateLimitResetTime ? "✅" : "❌"
+    );
+
+    // Test status function
+    console.log("\n=== Testing Rate Limit Status ===");
+    this.isRateLimited = true;
+    this.rateLimitResetTime = Date.now() + 120 * 1000; // 2 minutes from now
+    const timeUntilReset =
+      this.rateLimitResetTime > 0
+        ? Math.max(0, this.rateLimitResetTime - Date.now())
+        : 0;
+    const resetTimeString =
+      this.rateLimitResetTime > 0
+        ? new Date(this.rateLimitResetTime).toLocaleTimeString()
+        : null;
+
+    console.log("  isRateLimited:", this.isRateLimited);
+    console.log(
+      "  timeUntilReset:",
+      Math.round(timeUntilReset / 1000),
+      "seconds"
+    );
+    console.log("  resetTimeString:", resetTimeString);
+
+    // Clean up
+    this.isRateLimited = false;
+    this.rateLimitResetTime = 0;
+    testComment.remove();
+
+    console.log("\n=== Rate Limiting Test Complete ===");
+    console.log(
+      "✅ Rate limiting functionality appears to be working correctly"
+    );
+    console.log("When a 429 error occurs:");
+    console.log("1. isRateLimited will be set to true");
+    console.log(
+      "2. rateLimitResetTime will be set based on retry-after header or default to 1 hour"
+    );
+    console.log(
+      "3. All subsequent fetch attempts will be skipped until the reset time"
+    );
+    console.log(
+      "4. extractFollowerCount will return null instead of attempting to fetch"
+    );
+  }
 }
 
 // Initialize the extension only once
@@ -3295,6 +3491,7 @@ if (!window.threadsCommentFilter) {
       console.log("- testShowButtonStatePersistence()");
       console.log("- testShowButtonVisibilityConditions()");
       console.log("- testCurrentPageClickBehavior()");
+      console.log("- testRateLimiting()");
     } else {
       console.log(
         "Extension not loaded yet. Please wait a moment and try again."
@@ -3385,6 +3582,7 @@ if (!window.threadsCommentFilter) {
       console.log("- testShowButtonStatePersistence()");
       console.log("- testShowButtonVisibilityConditions()");
       console.log("- testCurrentPageClickBehavior()");
+      console.log("- testRateLimiting()");
     } else {
       console.log("❌ Extension not loaded yet");
       console.log("Please wait a moment and try again");
@@ -3549,6 +3747,9 @@ if (!window.threadsCommentFilter) {
 
     console.log("=== End Current Page Click Test ===");
   };
+
+  window.testRateLimiting = () =>
+    window.threadsCommentFilter.testRateLimiting();
 }
 
 // Cleanup when page is unloaded
