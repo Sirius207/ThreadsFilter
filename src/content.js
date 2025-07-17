@@ -1001,13 +1001,13 @@ class ThreadsCommentFilter {
     }
 
     // If not found in DOM, try to fetch from user profile
-    this.fetchFollowerCountFromProfile(username, commentElement);
+    this.fetchFollowerCountFromProfile(username);
 
     // Return null to indicate unknown (will be updated when fetch completes)
     return null;
   }
 
-  async fetchFollowerCountFromProfile(username, commentElement) {
+  async fetchFollowerCountFromProfile(username) {
     try {
       // Check cache first to prevent duplicate requests
       if (this.followerCache.has(username)) {
@@ -1107,27 +1107,36 @@ class ThreadsCommentFilter {
         // Cache the result
         this.followerCache.set(username, followerCount);
 
-        // Update the comment data - preserve existing avatar and verification status
-        const data = commentElement.dataset.threadsFilterData;
-        if (data) {
-          const commentData = JSON.parse(data);
-          commentData.followers = followerCount;
-          commentElement.dataset.threadsFilterData =
-            JSON.stringify(commentData);
-        }
+        // Update ALL comments by this user, not just the current one
+        const allCommentsByUser = document.querySelectorAll(
+          `.threads-filter-processed[data-threads-filter-data*="${username}"]`
+        );
 
-        // Update the display using addFollowerCountDisplay to respect current settings
-        // Preserve the original avatar and verification status from the comment data
-        const originalData = data ? JSON.parse(data) : {};
-        this.addFollowerCountDisplay(commentElement, {
-          username: username,
-          followerCount: followerCount,
-          isVerified: originalData.isVerified || false,
-          hasDefaultAvatar: originalData.hasDefaultAvatar || false,
+        this.log(
+          `Updating ${allCommentsByUser.length} comments by @${username} with follower count: ${followerCount}`
+        );
+
+        allCommentsByUser.forEach((comment) => {
+          // Update the comment data - preserve existing avatar and verification status
+          const data = comment.dataset.threadsFilterData;
+          if (data) {
+            const commentData = JSON.parse(data);
+            commentData.followers = followerCount;
+            comment.dataset.threadsFilterData = JSON.stringify(commentData);
+
+            // Update the display using addFollowerCountDisplay to respect current settings
+            // Preserve the original avatar and verification status from the comment data
+            this.addFollowerCountDisplay(comment, {
+              username: username,
+              followerCount: followerCount,
+              isVerified: commentData.isVerified || false,
+              hasDefaultAvatar: commentData.hasDefaultAvatar || false,
+            });
+
+            // Re-apply filters for this comment
+            this._reapplyFiltersForComment(comment);
+          }
         });
-
-        // Only re-apply filters for this specific comment, don't trigger full reprocessing
-        this._reapplyFiltersForComment(commentElement);
 
         this.log(
           `Successfully fetched follower count for @${username}: ${followerCount}`
@@ -2078,7 +2087,7 @@ class ThreadsCommentFilter {
       username: username,
     });
 
-    this.fetchFollowerCountFromProfile(username, tempElement);
+    this.fetchFollowerCountFromProfile(username);
   }
 
   // Test function to verify follower count visibility toggle
