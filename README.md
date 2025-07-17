@@ -114,6 +114,41 @@ A powerful browser extension that filters Threads comments based on follower cou
 - **Hide Animation**: Toggle smooth fade-out animation for hidden comments
 - **Debug Mode**: Enable detailed console logging for troubleshooting
 
+## Recent Improvements (v1.1.0)
+
+### ✨ New Features
+
+- **Blur Effect for Filtered Comments**
+  - Adjustable blur slider in Advanced Settings (0px to 3px)
+  - Real-time blur effect updates as you adjust the slider
+  - Blur resets on hover or click, depending on settings
+  - Full internationalization support for blur settings
+- **Traditional Chinese Translation Improvements**
+  - Updated terminology for better consistency ("追蹤者" → "粉絲")
+
+### 🐞 Bug Fixes
+
+- **Infinite Loop Prevention**: Fixed issues where comments would repeatedly toggle between hidden and visible states
+- **Comment Flickering**: Resolved flickering when follower counts update or when switching modes
+- **Duplicate Filtering**: Prevented comments from being filtered multiple times before stabilizing
+- **Button Flickering**: Fixed flicker on the "Refresh Stats" button and improved update frequency
+- **Hide Animation Issues**: Improved stability and cleanup for hide animation mode
+- **Blur Logic**: Ensured blur only resets as intended and cleaned up related CSS
+
+### ⚡ Performance & Technical Improvements
+
+- Optimized filter application and state change tracking to reduce unnecessary re-filtering
+- Improved MutationObserver logic to distinguish between significant and minor DOM changes
+- Added debouncing and batch update mechanisms for efficient filtering
+- Enhanced error handling and memory management
+- Improved debug logging for easier troubleshooting
+
+### 💎 UI/UX Enhancements
+
+- Improved layout and visual presentation of filtered comments
+- Optimized filtered label layout and removed unnecessary borders/padding
+- Enhanced overall user experience
+
 ## Recent Improvements (v1.0.2)
 
 ### 🎭 **Enhanced Hide Mode**
