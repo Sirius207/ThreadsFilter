@@ -1,6 +1,8 @@
 # ThreadsFilter
 
-A powerful browser extension that filters Threads comments based on follower count and avatar characteristics, providing a cleaner and more focused social media experience.
+A powerful browser extension that filters Threads comments based on follower count and avatar characteristics, providing a cleaner and more focused social media experience with advanced visual effects and multi-language support.
+
+**🌍 Available in other languages: [繁體中文](README.zh_TW.md) | [日本語](README.ja.md)**
 
 ## Features
 
@@ -11,6 +13,7 @@ A powerful browser extension that filters Threads comments based on follower cou
 - **Verified Account Filter**: Option to hide comments from verified accounts
 - **Flexible Display Modes**: Choose between hiding comments completely or applying grayscale effect
 - **Hide Mode with Animation**: Smooth fade-out animation for hidden comments with toggle option
+- **Blur Effect**: Apply adjustable blur filter to filtered comments for enhanced visual control
 
 ### 🌍 **Internationalization**
 
@@ -32,10 +35,11 @@ A powerful browser extension that filters Threads comments based on follower cou
 - **Follower Count Display**: Show follower counts next to usernames
 - **Display Mode Selection**:
   - **Hide Comments**: Completely hide filtered comments with optional smooth animation
-  - **Grayscale Comments**: Apply grayscale effect to filtered comments
+  - **Grayscale Comments**: Apply grayscale effect to filtered comments with customizable opacity
 - **Follower Range Control**: Set minimum and maximum follower thresholds
 - **Avatar Filter Options**: Control default avatar and verified account filtering
 - **Click-to-Show**: Optional click interaction for filtered comments in grayscale mode
+- **Advanced Visual Controls**: Adjustable blur amount (0px to 3px) and grayscale opacity (0.1 to 1.0)
 
 ### 🛠️ **Developer Features**
 
