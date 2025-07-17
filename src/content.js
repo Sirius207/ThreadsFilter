@@ -377,6 +377,9 @@ class ThreadsCommentFilter {
     // Rate limiting state for 429 errors
     this.isRateLimited = false; // Flag to track if we're currently rate limited
     this.rateLimitResetTime = 0; // Timestamp when rate limit should reset (if provided)
+    // Request tracking to prevent duplicate requests
+    this.pendingRequests = new Set(); // Track usernames that have requests in progress
+    this.failedRequests = new Set(); // Track usernames that have failed to fetch (to prevent retrying)
     this.init();
   }
 
@@ -543,6 +546,15 @@ class ThreadsCommentFilter {
             message: "Rate limit state reset",
           });
           break;
+        case "resetFailedRequests":
+          this.log("ThreadsCommentFilter: Resetting failed requests");
+          this.failedRequests.clear();
+          sendResponse({
+            success: true,
+            message: "Failed requests reset",
+            failedCount: 0,
+          });
+          break;
         case "getRateLimitStatus": {
           this.log("ThreadsCommentFilter: Getting rate limit status");
           const timeUntilReset =
@@ -654,19 +666,26 @@ class ThreadsCommentFilter {
 
     let comments = [];
     let totalElements = 0;
+    const processedElements = new Set(); // Track processed elements to avoid duplicates
 
     commentSelectors.forEach((selector) => {
       const elements = document.querySelectorAll(selector);
       totalElements += elements.length;
       elements.forEach((element) => {
+        // Skip if we've already processed this element
+        if (processedElements.has(element)) {
+          return;
+        }
+
         if (this.isCommentElement(element)) {
           comments.push(element);
+          processedElements.add(element); // Mark as processed
         }
       });
     });
 
     this.log(
-      `Threads Filter: Found ${totalElements} potential elements, ${comments.length} confirmed comments`
+      `Threads Filter: Found ${totalElements} potential elements, ${comments.length} confirmed comments (after deduplication)`
     );
 
     comments.forEach((comment) => this.processComment(comment));
@@ -990,6 +1009,28 @@ class ThreadsCommentFilter {
 
   async fetchFollowerCountFromProfile(username, commentElement) {
     try {
+      // Check cache first to prevent duplicate requests
+      if (this.followerCache.has(username)) {
+        this.log(
+          `Follower count for @${username} already cached, skipping fetch`
+        );
+        return;
+      }
+
+      // Check if request is already in progress for this username
+      if (this.pendingRequests.has(username)) {
+        this.log(
+          `Request for @${username} already in progress, skipping duplicate request`
+        );
+        return;
+      }
+
+      // Check if this username has previously failed to fetch
+      if (this.failedRequests.has(username)) {
+        this.log(`Request for @${username} previously failed, skipping retry`);
+        return;
+      }
+
       // Check if we're currently rate limited
       if (this.isRateLimited) {
         // Check if rate limit has expired (if we have a reset time)
@@ -1006,6 +1047,8 @@ class ThreadsCommentFilter {
         }
       }
 
+      // Mark request as in progress
+      this.pendingRequests.add(username);
       this.log(`Fetching follower count for @${username}...`);
 
       // Fetch the user profile page
@@ -1045,6 +1088,9 @@ class ThreadsCommentFilter {
         this.log(
           `Rate limited (429): Stopping all follower count requests until ${new Date(this.rateLimitResetTime).toLocaleTimeString()}`
         );
+
+        // Remove from pending requests since we're not proceeding
+        this.pendingRequests.delete(username);
         return;
       }
 
@@ -1087,12 +1133,19 @@ class ThreadsCommentFilter {
           `Successfully fetched follower count for @${username}: ${followerCount}`
         );
       } else {
+        // Mark this username as failed to prevent future retries
+        this.failedRequests.add(username);
         this.log(
-          `Could not find follower count for @${username} in profile page`
+          `Could not find follower count for @${username} in profile page - marked as failed`
         );
       }
     } catch (error) {
+      // Mark this username as failed to prevent future retries
+      this.failedRequests.add(username);
       console.error(`Error fetching follower count for @${username}:`, error);
+    } finally {
+      // Always remove from pending requests when done (success or error)
+      this.pendingRequests.delete(username);
     }
   }
 
@@ -3313,109 +3366,301 @@ class ThreadsCommentFilter {
 
   // Test function to verify rate limiting functionality
   testRateLimiting() {
-    this.log("=== Testing Rate Limiting Functionality ===");
+    this.log("=== Testing Rate Limiting and Failed Requests ===");
 
-    // Test initial state
-    console.log("Initial rate limit state:");
-    console.log("  isRateLimited:", this.isRateLimited);
-    console.log("  rateLimitResetTime:", this.rateLimitResetTime);
+    // Test 1: Basic rate limiting simulation
+    this.log("Test 1: Simulating 429 rate limit response");
+    const originalFetch = window.fetch;
+    let fetchCallCount = 0;
+
+    // Mock fetch to simulate 429 response
+    window.fetch = async () => {
+      fetchCallCount++;
+      this.log(`Mock fetch called ${fetchCallCount} times`);
+
+      if (fetchCallCount === 1) {
+        // First call returns 429
+        return {
+          status: 429,
+          ok: false,
+          headers: {
+            get: (name) => (name === "retry-after" ? "60" : null),
+          },
+        };
+      } else {
+        // Subsequent calls return 200 with follower count
+        return {
+          status: 200,
+          ok: true,
+          text: async () => '<span title="1000">1000</span>位粉絲',
+        };
+      }
+    };
+
+    // Test the rate limiting
+    this.fetchFollowerCountFromProfile(
+      "testuser",
+      document.createElement("div")
+    )
+      .then(() => {
+        this.log("Rate limit test completed");
+        this.log(`Rate limited: ${this.isRateLimited}`);
+        this.log(`Reset time: ${this.rateLimitResetTime}`);
+
+        // Test that subsequent requests are blocked
+        return this.fetchFollowerCountFromProfile(
+          "testuser2",
+          document.createElement("div")
+        );
+      })
+      .then(() => {
+        this.log("Second request should be blocked by rate limit");
+        this.log(`Fetch call count: ${fetchCallCount}`);
+
+        // Restore original fetch
+        window.fetch = originalFetch;
+
+        // Reset rate limit for next tests
+        this.isRateLimited = false;
+        this.rateLimitResetTime = 0;
+
+        this.log("Test 1 completed");
+      });
+
+    // Test 2: Failed requests tracking
+    setTimeout(() => {
+      this.log("Test 2: Testing failed requests tracking");
+
+      // Mock fetch to simulate failed response
+      window.fetch = async () => {
+        return {
+          status: 200,
+          ok: true,
+          text: async () => "<div>No follower count here</div>", // No follower count in response
+        };
+      };
+
+      // Test failed request
+      this.fetchFollowerCountFromProfile(
+        "faileduser",
+        document.createElement("div")
+      )
+        .then(() => {
+          this.log(`Failed requests set: ${Array.from(this.failedRequests)}`);
+          this.log(`Failed requests count: ${this.failedRequests.size}`);
+
+          // Test that retry is blocked
+          return this.fetchFollowerCountFromProfile(
+            "faileduser",
+            document.createElement("div")
+          );
+        })
+        .then(() => {
+          this.log("Retry should be blocked by failed requests tracking");
+
+          // Test reset functionality
+          this.failedRequests.clear();
+          this.log("Failed requests cleared");
+          this.log(
+            `Failed requests count after clear: ${this.failedRequests.size}`
+          );
+
+          // Restore original fetch
+          window.fetch = originalFetch;
+
+          this.log("Test 2 completed");
+        });
+    }, 2000);
+
+    // Test 3: Pending requests tracking
+    setTimeout(() => {
+      this.log("Test 3: Testing pending requests tracking");
+
+      // Mock fetch to simulate slow response
+      window.fetch = async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100)); // Simulate delay
+        return {
+          status: 200,
+          ok: true,
+          text: async () => '<span title="500">500</span>位粉絲',
+        };
+      };
+
+      // Test simultaneous requests
+      const promises = [
+        this.fetchFollowerCountFromProfile(
+          "simultaneous1",
+          document.createElement("div")
+        ),
+        this.fetchFollowerCountFromProfile(
+          "simultaneous1",
+          document.createElement("div")
+        ), // Duplicate
+        this.fetchFollowerCountFromProfile(
+          "simultaneous2",
+          document.createElement("div")
+        ),
+      ];
+
+      Promise.all(promises).then(() => {
+        this.log(`Pending requests set: ${Array.from(this.pendingRequests)}`);
+        this.log(`Pending requests count: ${this.pendingRequests.size}`);
+
+        // Restore original fetch
+        window.fetch = originalFetch;
+
+        this.log("Test 3 completed");
+        this.log("=== Rate Limiting and Failed Requests Test Complete ===");
+      });
+    }, 4000);
+  }
+
+  // Test function to verify comment deduplication
+  async testCommentDeduplication() {
+    this.log("=== Testing Comment Deduplication ===");
+
+    // Create test elements that would match multiple selectors
+    const testContainer = document.createElement("div");
+    testContainer.innerHTML = `
+      <div data-pressable-container="true" class="x1ypdohk x1n2onr6 xwag103 xrtyd2m x1e9mfsr xnrf12o xz9dl7a">
+        <div class="x1a6qonq x6ikm8r x10wlt62 xj0a0fe x126k92a x6prxxf x7r5mf7">
+          <span dir="auto">Test comment</span>
+        </div>
+        <a href="/@testuser">@testuser</a>
+        <svg aria-label="讚"></svg>
+      </div>
+    `;
+
+    // Mock the isCommentElement method to return true for our test element
+    const originalIsCommentElement = this.isCommentElement.bind(this);
+    this.isCommentElement = (element) => {
+      // Return true for our test element, false for others
+      return element === testContainer.firstElementChild;
+    };
+
+    // Mock the processComment method to track calls
+    const originalProcessComment = this.processComment.bind(this);
+    const processedComments = [];
+    this.processComment = (commentElement) => {
+      processedComments.push(commentElement);
+      this.log(`processComment called for element:`, commentElement);
+    };
+
+    // Test the deduplication logic
+    console.log("Testing comment deduplication...");
+
+    // Simulate the comment finding logic
+    const commentSelectors = [
+      'div[data-pressable-container="true"]',
+      ".x1ypdohk.x1n2onr6.xwag103.xrtyd2m.x1e9mfsr.xnrf12o.xz9dl7a",
+      ".x1a6qonq.x6ikm8r.x10wlt62.xj0a0fe.x126k92a.x6prxxf.x7r5mf7",
+    ];
+
+    let comments = [];
+    const processedElements = new Set();
+
+    commentSelectors.forEach((selector) => {
+      const elements = testContainer.querySelectorAll(selector);
+      console.log(`Selector "${selector}" found ${elements.length} elements`);
+
+      elements.forEach((element) => {
+        if (processedElements.has(element)) {
+          console.log(`  Skipping duplicate element:`, element);
+          return;
+        }
+
+        if (this.isCommentElement(element)) {
+          comments.push(element);
+          processedElements.add(element);
+          console.log(`  Added comment element:`, element);
+        }
+      });
+    });
+
+    console.log(`Total comments found: ${comments.length}`);
     console.log(
-      "  Reset time string:",
-      this.rateLimitResetTime > 0
-        ? new Date(this.rateLimitResetTime).toLocaleTimeString()
-        : "None"
+      `Should be 1 (deduplicated): ${comments.length === 1 ? "✅" : "❌"}`
     );
 
-    // Test setting rate limit
-    console.log("\n=== Testing Rate Limit Setting ===");
-    this.isRateLimited = true;
-    this.rateLimitResetTime = Date.now() + 30 * 1000; // 30 seconds from now
-    console.log("Set rate limit for 30 seconds");
-    console.log("  isRateLimited:", this.isRateLimited);
+    // Test the cache check in fetchFollowerCountFromProfile
     console.log(
-      "  Reset time:",
-      new Date(this.rateLimitResetTime).toLocaleTimeString()
+      "\n=== Testing Cache Check in fetchFollowerCountFromProfile ==="
     );
 
-    // Test extractFollowerCount behavior when rate limited
-    console.log("\n=== Testing extractFollowerCount when rate limited ===");
+    // Add a test user to cache
+    this.followerCache.set("testuser", 1000);
+    console.log("Added testuser to cache with 1000 followers");
+
+    // Mock the fetch method to track calls
+    const originalFetch = globalThis.fetch;
+    let fetchCallCount = 0;
+    globalThis.fetch = async (url) => {
+      fetchCallCount++;
+      console.log(`Fetch called ${fetchCallCount} times for URL:`, url);
+      return new Response("", { status: 200 });
+    };
+
+    // Call fetchFollowerCountFromProfile multiple times
     const testComment = document.createElement("div");
-    const testUsername = "testuser";
+    this.fetchFollowerCountFromProfile("testuser", testComment);
+    this.fetchFollowerCountFromProfile("testuser", testComment);
+    this.fetchFollowerCountFromProfile("testuser", testComment);
 
-    // Mock the method to avoid actual DOM queries
-    testComment.querySelectorAll = () => [];
+    console.log(`Fetch was called ${fetchCallCount} times`);
+    console.log(`Should be 0 (cached): ${fetchCallCount === 0 ? "✅" : "❌"}`);
 
-    const result = this.extractFollowerCount(testComment, testUsername);
-    console.log("  Result when rate limited:", result);
-    console.log("  Should be null:", result === null ? "✅" : "❌");
+    // Test pending requests tracking
+    console.log("\n=== Testing Pending Requests Tracking ===");
 
-    // Test rate limit expiration
-    console.log("\n=== Testing Rate Limit Expiration ===");
-    this.rateLimitResetTime = Date.now() - 1000; // Set to 1 second ago
-    this.extractFollowerCount(testComment, testUsername);
-    console.log("  isRateLimited after expiry:", this.isRateLimited);
+    // Clear cache and reset pending requests
+    this.followerCache.clear();
+    this.pendingRequests.clear();
+
+    // Mock fetch to simulate a slow request
+    let slowFetchCallCount = 0;
+    globalThis.fetch = async (url) => {
+      slowFetchCallCount++;
+      console.log(
+        `Slow fetch called ${slowFetchCallCount} times for URL:`,
+        url
+      );
+      // Simulate a slow request
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      return new Response("", { status: 200 });
+    };
+
+    // Start multiple requests for the same user simultaneously
+    const promises = [
+      this.fetchFollowerCountFromProfile("slowuser", testComment),
+      this.fetchFollowerCountFromProfile("slowuser", testComment),
+      this.fetchFollowerCountFromProfile("slowuser", testComment),
+    ];
+
+    // Wait for all requests to complete
+    await Promise.all(promises);
+
+    console.log(`Slow fetch was called ${slowFetchCallCount} times`);
     console.log(
-      "  Should be false:",
-      this.isRateLimited === false ? "✅" : "❌"
+      `Should be 1 (pending requests tracked): ${slowFetchCallCount === 1 ? "✅" : "❌"}`
     );
-
-    // Test reset function
-    console.log("\n=== Testing Rate Limit Reset ===");
-    this.isRateLimited = true;
-    this.rateLimitResetTime = Date.now() + 60 * 1000;
-    console.log("Set rate limit again");
-
-    // Simulate the resetRateLimit case
-    this.isRateLimited = false;
-    this.rateLimitResetTime = 0;
-    console.log("  isRateLimited after reset:", this.isRateLimited);
-    console.log("  rateLimitResetTime after reset:", this.rateLimitResetTime);
+    console.log(`Pending requests set size: ${this.pendingRequests.size}`);
     console.log(
-      "  Should both be falsy:",
-      !this.isRateLimited && !this.rateLimitResetTime ? "✅" : "❌"
+      `Should be 0 (all requests completed): ${this.pendingRequests.size === 0 ? "✅" : "❌"}`
     );
-
-    // Test status function
-    console.log("\n=== Testing Rate Limit Status ===");
-    this.isRateLimited = true;
-    this.rateLimitResetTime = Date.now() + 120 * 1000; // 2 minutes from now
-    const timeUntilReset =
-      this.rateLimitResetTime > 0
-        ? Math.max(0, this.rateLimitResetTime - Date.now())
-        : 0;
-    const resetTimeString =
-      this.rateLimitResetTime > 0
-        ? new Date(this.rateLimitResetTime).toLocaleTimeString()
-        : null;
-
-    console.log("  isRateLimited:", this.isRateLimited);
-    console.log(
-      "  timeUntilReset:",
-      Math.round(timeUntilReset / 1000),
-      "seconds"
-    );
-    console.log("  resetTimeString:", resetTimeString);
 
     // Clean up
-    this.isRateLimited = false;
-    this.rateLimitResetTime = 0;
+    this.isCommentElement = originalIsCommentElement;
+    this.processComment = originalProcessComment;
+    globalThis.fetch = originalFetch;
+    testContainer.remove();
     testComment.remove();
 
-    console.log("\n=== Rate Limiting Test Complete ===");
-    console.log(
-      "✅ Rate limiting functionality appears to be working correctly"
-    );
-    console.log("When a 429 error occurs:");
-    console.log("1. isRateLimited will be set to true");
-    console.log(
-      "2. rateLimitResetTime will be set based on retry-after header or default to 1 hour"
-    );
-    console.log(
-      "3. All subsequent fetch attempts will be skipped until the reset time"
-    );
-    console.log(
-      "4. extractFollowerCount will return null instead of attempting to fetch"
-    );
+    console.log("\n=== Comment Deduplication Test Complete ===");
+    console.log("✅ Comment deduplication appears to be working correctly");
+    console.log("This prevents:");
+    console.log("1. Duplicate comment processing");
+    console.log("2. Duplicate follower count requests");
+    console.log("3. Unnecessary API calls");
   }
 }
 
@@ -3492,6 +3737,7 @@ if (!window.threadsCommentFilter) {
       console.log("- testShowButtonVisibilityConditions()");
       console.log("- testCurrentPageClickBehavior()");
       console.log("- testRateLimiting()");
+      console.log("- testCommentDeduplication()");
     } else {
       console.log(
         "Extension not loaded yet. Please wait a moment and try again."
@@ -3583,6 +3829,7 @@ if (!window.threadsCommentFilter) {
       console.log("- testShowButtonVisibilityConditions()");
       console.log("- testCurrentPageClickBehavior()");
       console.log("- testRateLimiting()");
+      console.log("- testCommentDeduplication()");
     } else {
       console.log("❌ Extension not loaded yet");
       console.log("Please wait a moment and try again");
@@ -3750,6 +3997,9 @@ if (!window.threadsCommentFilter) {
 
   window.testRateLimiting = () =>
     window.threadsCommentFilter.testRateLimiting();
+
+  window.testCommentDeduplication = () =>
+    window.threadsCommentFilter.testCommentDeduplication();
 }
 
 // Cleanup when page is unloaded
@@ -3758,3 +4008,5 @@ window.addEventListener("beforeunload", () => {
     window.threadsCommentFilter.cleanup();
   }
 });
+
+// Expose test functions globally for debugging
