@@ -103,6 +103,75 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
+/* Hide "Filtered" label in click mode since we have the show button */
+.threads-filter-grayscale.click-mode::before {
+  display: none;
+}
+
+/* Show button styling */
+.threads-filter-show-btn {
+  position: absolute !important;
+  top: 12px !important;
+  right: 60px !important;
+  background: #1877f2 !important; /* Facebook blue - more visible */
+  color: white !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 4px 8px !important;
+  font-size: 10px !important;
+  font-weight: 600 !important; /* Slightly bolder */
+  cursor: pointer !important;
+  z-index: 1000 !important;
+  transition: all 0.2s ease !important;
+  pointer-events: auto !important;
+  font-family: inherit !important;
+  line-height: 1.2 !important;
+  min-width: 32px !important;
+  text-align: center !important;
+  /* Ensure button is not affected by parent's opacity */
+  opacity: 1 !important;
+  /* Add a subtle shadow for better visibility */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  /* Override any inherited filter effects */
+  filter: none !important;
+  /* Ensure text color is not affected by parent's grayscale */
+  color: white !important;
+  /* Force background to be solid and not affected by parent's opacity */
+  background-color: #1877f2 !important;
+  background-image: none !important;
+}
+
+.threads-filter-show-btn:hover {
+  background: #166fe5 !important; /* Darker blue on hover */
+  background-color: #166fe5 !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3) !important;
+  /* Maintain full opacity on hover */
+  opacity: 1 !important;
+  /* Ensure text remains white on hover */
+  color: white !important;
+}
+
+.threads-filter-show-btn:active {
+  transform: scale(0.95) !important;
+  background: #1464d0 !important; /* Even darker when clicked */
+  background-color: #1464d0 !important;
+  /* Maintain full opacity when active */
+  opacity: 1 !important;
+  /* Ensure text remains white when active */
+  color: white !important;
+}
+
+/* Focus styles for accessibility */
+.threads-filter-show-btn:focus {
+  outline: 2px solid #1877f2 !important;
+  outline-offset: 1px !important;
+  /* Maintain full opacity when focused */
+  opacity: 1 !important;
+  /* Ensure text remains white when focused */
+  color: white !important;
+}
+
 /* Smooth transitions for all filter effects */
 [data-threads-filter-data] {
   transition: all 0.3s ease;
@@ -128,6 +197,14 @@
     /* Further reduce space usage on mobile devices */
     max-width: calc(100% - 4px);
     line-height: 1.1;
+  }
+
+  .threads-filter-show-btn {
+    font-size: 9px !important;
+    padding: 3px 6px !important;
+    top: 2px !important;
+    right: 2px !important;
+    min-width: 28px !important;
   }
 }
 
@@ -162,6 +239,33 @@
     color: #b0b3b8;
     /* Shadow adjustment for dark mode */
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  .threads-filter-show-btn {
+    background: #42a5f5 !important; /* Lighter blue for dark mode */
+    background-color: #42a5f5 !important;
+    color: #000 !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4) !important;
+    /* Ensure button is not affected by parent's opacity in dark mode */
+    opacity: 1 !important;
+    filter: none !important;
+  }
+
+  .threads-filter-show-btn:hover {
+    background: #64b5f6 !important; /* Even lighter on hover */
+    background-color: #64b5f6 !important;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5) !important;
+    /* Maintain full opacity on hover */
+    opacity: 1 !important;
+    color: #000 !important;
+  }
+
+  .threads-filter-show-btn:active {
+    background: #2196f3 !important; /* Slightly darker when clicked */
+    background-color: #2196f3 !important;
+    /* Maintain full opacity when active */
+    opacity: 1 !important;
+    color: #000 !important;
   }
 }
 

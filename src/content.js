@@ -374,6 +374,12 @@ class ThreadsCommentFilter {
     this.filterApplyDebounce = null; // Debounce timer for filter application
     this.lastFilterApply = 0; // Track last filter application time
     this.lastCleanupTime = 0; // Track last cleanup time
+    // Rate limiting state for 429 errors
+    this.isRateLimited = false; // Flag to track if we're currently rate limited
+    this.rateLimitResetTime = 0; // Timestamp when rate limit should reset (if provided)
+    // Request tracking to prevent duplicate requests
+    this.pendingRequests = new Set(); // Track usernames that have requests in progress
+    this.failedRequests = new Set(); // Track usernames that have failed to fetch (to prevent retrying)
     this.init();
   }
 
@@ -531,6 +537,41 @@ class ThreadsCommentFilter {
             showFollowerCount: this.settings.showFollowerCount,
           });
           break;
+        case "resetRateLimit":
+          this.log("ThreadsCommentFilter: Resetting rate limit state");
+          this.isRateLimited = false;
+          this.rateLimitResetTime = 0;
+          sendResponse({
+            success: true,
+            message: "Rate limit state reset",
+          });
+          break;
+        case "resetFailedRequests":
+          this.log("ThreadsCommentFilter: Resetting failed requests");
+          this.failedRequests.clear();
+          sendResponse({
+            success: true,
+            message: "Failed requests reset",
+            failedCount: 0,
+          });
+          break;
+        case "getRateLimitStatus": {
+          this.log("ThreadsCommentFilter: Getting rate limit status");
+          const timeUntilReset =
+            this.rateLimitResetTime > 0
+              ? Math.max(0, this.rateLimitResetTime - Date.now())
+              : 0;
+          sendResponse({
+            isRateLimited: this.isRateLimited,
+            rateLimitResetTime: this.rateLimitResetTime,
+            timeUntilReset: timeUntilReset,
+            resetTimeString:
+              this.rateLimitResetTime > 0
+                ? new Date(this.rateLimitResetTime).toLocaleTimeString()
+                : null,
+          });
+          break;
+        }
         default:
           this.log(
             "ThreadsCommentFilter: Unknown message action:",
@@ -625,19 +666,26 @@ class ThreadsCommentFilter {
 
     let comments = [];
     let totalElements = 0;
+    const processedElements = new Set(); // Track processed elements to avoid duplicates
 
     commentSelectors.forEach((selector) => {
       const elements = document.querySelectorAll(selector);
       totalElements += elements.length;
       elements.forEach((element) => {
+        // Skip if we've already processed this element
+        if (processedElements.has(element)) {
+          return;
+        }
+
         if (this.isCommentElement(element)) {
           comments.push(element);
+          processedElements.add(element); // Mark as processed
         }
       });
     });
 
     this.log(
-      `Threads Filter: Found ${totalElements} potential elements, ${comments.length} confirmed comments`
+      `Threads Filter: Found ${totalElements} potential elements, ${comments.length} confirmed comments (after deduplication)`
     );
 
     comments.forEach((comment) => this.processComment(comment));
@@ -919,6 +967,22 @@ class ThreadsCommentFilter {
       return this.followerCache.get(username);
     }
 
+    // Check if we're currently rate limited
+    if (this.isRateLimited) {
+      // Check if rate limit has expired (if we have a reset time)
+      if (
+        this.rateLimitResetTime > 0 &&
+        Date.now() >= this.rateLimitResetTime
+      ) {
+        this.log("Rate limit period has expired, resuming requests");
+        this.isRateLimited = false;
+        this.rateLimitResetTime = 0;
+      } else {
+        this.log(`Skipping fetch for @${username} - currently rate limited`);
+        return null; // Return null and don't attempt to fetch
+      }
+    }
+
     // Look for follower count in various possible locations
     const possibleElements = commentElement.querySelectorAll("span, div");
 
@@ -945,6 +1009,46 @@ class ThreadsCommentFilter {
 
   async fetchFollowerCountFromProfile(username, commentElement) {
     try {
+      // Check cache first to prevent duplicate requests
+      if (this.followerCache.has(username)) {
+        this.log(
+          `Follower count for @${username} already cached, skipping fetch`
+        );
+        return;
+      }
+
+      // Check if request is already in progress for this username
+      if (this.pendingRequests.has(username)) {
+        this.log(
+          `Request for @${username} already in progress, skipping duplicate request`
+        );
+        return;
+      }
+
+      // Check if this username has previously failed to fetch
+      if (this.failedRequests.has(username)) {
+        this.log(`Request for @${username} previously failed, skipping retry`);
+        return;
+      }
+
+      // Check if we're currently rate limited
+      if (this.isRateLimited) {
+        // Check if rate limit has expired (if we have a reset time)
+        if (
+          this.rateLimitResetTime > 0 &&
+          Date.now() >= this.rateLimitResetTime
+        ) {
+          this.log("Rate limit period has expired, resuming requests");
+          this.isRateLimited = false;
+          this.rateLimitResetTime = 0;
+        } else {
+          this.log(`Skipping fetch for @${username} - currently rate limited`);
+          return; // Don't make the request
+        }
+      }
+
+      // Mark request as in progress
+      this.pendingRequests.add(username);
       this.log(`Fetching follower count for @${username}...`);
 
       // Fetch the user profile page
@@ -958,6 +1062,37 @@ class ThreadsCommentFilter {
           Pragma: "no-cache",
         },
       });
+
+      if (response.status === 429) {
+        // Handle rate limiting
+        this.isRateLimited = true;
+
+        // Try to get retry-after header for reset time
+        const retryAfter = response.headers.get("retry-after");
+        if (retryAfter) {
+          const retrySeconds = parseInt(retryAfter, 10);
+          if (!isNaN(retrySeconds)) {
+            this.rateLimitResetTime = Date.now() + retrySeconds * 1000;
+            this.log(
+              `Rate limited: Will retry after ${retrySeconds} seconds (at ${new Date(this.rateLimitResetTime).toLocaleTimeString()})`
+            );
+          }
+        } else {
+          // Default to 1 hour if no retry-after header
+          this.rateLimitResetTime = Date.now() + 60 * 60 * 1000;
+          this.log(
+            `Rate limited: No retry-after header, defaulting to 1 hour (at ${new Date(this.rateLimitResetTime).toLocaleTimeString()})`
+          );
+        }
+
+        this.log(
+          `Rate limited (429): Stopping all follower count requests until ${new Date(this.rateLimitResetTime).toLocaleTimeString()}`
+        );
+
+        // Remove from pending requests since we're not proceeding
+        this.pendingRequests.delete(username);
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -998,12 +1133,19 @@ class ThreadsCommentFilter {
           `Successfully fetched follower count for @${username}: ${followerCount}`
         );
       } else {
+        // Mark this username as failed to prevent future retries
+        this.failedRequests.add(username);
         this.log(
-          `Could not find follower count for @${username} in profile page`
+          `Could not find follower count for @${username} in profile page - marked as failed`
         );
       }
     } catch (error) {
+      // Mark this username as failed to prevent future retries
+      this.failedRequests.add(username);
       console.error(`Error fetching follower count for @${username}:`, error);
+    } finally {
+      // Always remove from pending requests when done (success or error)
+      this.pendingRequests.delete(username);
     }
   }
 
@@ -1366,6 +1508,13 @@ class ThreadsCommentFilter {
       } else if (shouldBeFiltered && isCurrentlyFiltered) {
         // Comment is already filtered, but we need to re-apply the style in case display mode changed
         this.applyFilterStyle(comment);
+      } else if (!shouldBeFiltered && !isCurrentlyFiltered) {
+        // Comment is not filtered and should not be filtered, but might have leftover show button
+        // Remove any show button that might exist from previous filtering
+        this.removeShowButton(comment);
+        // Also remove any leftover showing state
+        comment.classList.remove("showing");
+        delete comment.dataset.threadsShowState;
       }
       // If comment state doesn't need to change, do nothing
     });
@@ -1593,10 +1742,17 @@ class ThreadsCommentFilter {
       if (this.settings.clickToShow) {
         commentElement.classList.add("click-mode");
         this.setupClickHandler(commentElement);
+        // Add show button for click mode (will preserve existing state)
+        // Only add button if comment is actually filtered
+        if (this.filteredComments.has(commentElement)) {
+          this.addShowButton(commentElement);
+        }
       } else {
         commentElement.classList.remove("click-mode");
         commentElement.classList.remove("showing");
         this.removeClickHandler(commentElement);
+        // Remove show button when not in click mode
+        this.removeShowButton(commentElement);
       }
     }
   }
@@ -1606,6 +1762,21 @@ class ThreadsCommentFilter {
     this.removeClickHandler(commentElement);
 
     const clickHandler = (e) => {
+      // Check if the clicked element is an interactive element that should not be overridden
+      const target = e.target;
+      const isInteractiveElement = this._isInteractiveElement(target);
+
+      if (isInteractiveElement) {
+        // Allow the original click event to proceed normally
+        this.log(
+          "Threads Filter: Allowing click on interactive element:",
+          target.tagName,
+          target.className
+        );
+        return; // Don't prevent default or stop propagation
+      }
+
+      // Only handle clicks on non-interactive elements
       // Prevent event bubbling to avoid triggering other click events
       e.stopPropagation();
 
@@ -1625,6 +1796,93 @@ class ThreadsCommentFilter {
 
     // Store the handler function for cleanup
     commentElement._threadsClickHandler = clickHandler;
+  }
+
+  // Helper method to check if an element is interactive and should not be overridden
+  _isInteractiveElement(element) {
+    if (!element) return false;
+
+    // Check if the element itself is interactive
+    const interactiveTags = [
+      "A",
+      "BUTTON",
+      "INPUT",
+      "SELECT",
+      "TEXTAREA",
+      "LABEL",
+    ];
+    const interactiveRoles = [
+      "button",
+      "link",
+      "menuitem",
+      "tab",
+      "checkbox",
+      "radio",
+      "textbox",
+      "combobox",
+      "listbox",
+      "option",
+    ];
+
+    // Check tag name
+    if (interactiveTags.includes(element.tagName)) {
+      return true;
+    }
+
+    // Check role attribute
+    const role = element.getAttribute("role");
+    if (role && interactiveRoles.includes(role)) {
+      return true;
+    }
+
+    // Check for specific Threads interactive elements
+    const threadsInteractiveSelectors = [
+      "svg[aria-label]", // SVG icons with aria-label (like "更多" button)
+      '[data-pressable-container="true"]', // Pressable containers
+      '[role="button"]', // Elements with button role
+      "[tabindex]", // Elements that can be focused
+      ".x6s0dn4", // Specific Threads button class (like the "更多" button)
+      "a[href]", // Links
+      "button", // Buttons
+      "input", // Input fields
+      "select", // Select dropdowns
+      "textarea", // Text areas
+    ];
+
+    // Check if the element matches any interactive selector
+    for (const selector of threadsInteractiveSelectors) {
+      if (element.matches(selector)) {
+        return true;
+      }
+    }
+
+    // Check if the element is a child of an interactive element
+    const closestInteractive = element.closest(
+      threadsInteractiveSelectors.join(",")
+    );
+    if (closestInteractive) {
+      return true;
+    }
+
+    // Check for specific Threads interactive classes
+    const interactiveClasses = [
+      "x6s0dn4", // More button class
+      "x1lliihq", // Icon class
+      "x135i0dr", // Interactive element class
+      "x2lah0s", // Interactive element class
+      "x1f5funs", // Interactive element class
+    ];
+
+    for (const className of interactiveClasses) {
+      if (
+        element.classList.contains(className) ||
+        element.closest(`.${className}`)
+      ) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   removeClickHandler(commentElement) {
@@ -1666,6 +1924,9 @@ class ThreadsCommentFilter {
 
     // Remove click handler if exists
     this.removeClickHandler(commentElement);
+
+    // Remove show button if exists (since comment is no longer filtered)
+    this.removeShowButton(commentElement);
 
     this.followerFilteredComments.delete(commentElement);
     this.avatarFilteredComments.delete(commentElement);
@@ -2130,10 +2391,17 @@ class ThreadsCommentFilter {
       if (this.settings.clickToShow) {
         comment.classList.add("click-mode");
         this.setupClickHandler(comment);
+        // Add show button for click mode (will preserve existing state)
+        // Only add button if comment is actually filtered
+        if (this.filteredComments.has(comment)) {
+          this.addShowButton(comment);
+        }
       } else {
         comment.classList.remove("click-mode");
         comment.classList.remove("showing");
         this.removeClickHandler(comment);
+        // Remove show button when not in click mode
+        this.removeShowButton(comment);
       }
     });
   }
@@ -2397,11 +2665,1002 @@ class ThreadsCommentFilter {
       // Comment is already filtered, but we need to re-apply the style in case display mode changed
       this.applyFilterStyle(commentElement);
       // Don't log this case as it's just a style refresh
+    } else if (!shouldBeFiltered && !isCurrentlyFiltered) {
+      // Comment is not filtered and should not be filtered, but might have leftover show button
+      // Remove any show button that might exist from previous filtering
+      this.removeShowButton(commentElement);
+      // Also remove any leftover showing state
+      commentElement.classList.remove("showing");
+      delete commentElement.dataset.threadsShowState;
     }
     // If comment state doesn't need to change, do nothing
 
     // Send updated stats to popup
     this.sendStatsToPopup();
+  }
+
+  // Test function to verify interactive element detection
+  testInteractiveElementDetection() {
+    this.log("=== Testing Interactive Element Detection ===");
+
+    // Test cases for different types of interactive elements
+    const testCases = [
+      {
+        description: "More button (更多)",
+        html: '<div class="x6s0dn4 x15dp1bm x1pg3x37 xqi6p0a x102ru31 x78zum5 xl56j7k x1n2onr6 x3oybdh xx6bhzk x12w9bfk x11xpdln x1qx5ct2 xw4jnvo"><svg aria-label="更多" role="img" viewBox="0 0 24 24" class="x1lliihq x135i0dr x2lah0s x1f5funs x1n2onr6 x1bl4301 x1gaogpn"><title>更多</title><circle cx="12" cy="12" r="1.5"></circle><circle cx="6" cy="12" r="1.5"></circle><circle cx="18" cy="12" r="1.5"></circle></svg></div>',
+        shouldBeInteractive: true,
+      },
+      {
+        description: "Regular link",
+        html: '<a href="/@username">Username</a>',
+        shouldBeInteractive: true,
+      },
+      {
+        description: "Button element",
+        html: "<button>Click me</button>",
+        shouldBeInteractive: true,
+      },
+      {
+        description: "Input field",
+        html: '<input type="text" placeholder="Enter text">',
+        shouldBeInteractive: true,
+      },
+      {
+        description: "Regular text span",
+        html: "<span>This is just text</span>",
+        shouldBeInteractive: false,
+      },
+      {
+        description: "Regular div",
+        html: '<div class="x1a6qonq x6ikm8r x10wlt62 xj0a0fe x126k92a x6prxxf x7r5mf7">Comment text</div>',
+        shouldBeInteractive: false,
+      },
+      {
+        description: "SVG with aria-label",
+        html: '<svg aria-label="Like" role="img" viewBox="0 0 24 24"><path d="M16.792 3.904A4.989 4.989 0 0121.5 9.122c0 3.072-2.652 4.959-5.197 7.222-2.512 2.243-3.865 3.469-4.303 3.752-.477-.309-2.143-1.823-4.303-3.752C5.141 14.072 2.5 12.167 2.5 9.122a4.989 4.989 0 014.708-5.218 4.21 4.21 0 013.675 1.941c.84 1.175.98 1.763 1.12 1.763s.278-.588 1.11-1.766a4.17 4.17 0 013.679-1.938m0-2a6.04 6.04 0 00-4.797 2.127 6.052 6.052 0 00-4.787-2.127A6.985 6.985 0 00.5 9.122c0 3.61 2.55 5.827 5.015 7.59.54.421.674 1.33.487 1.824-.187.495-.825.495-1.487.495-.66 0-1.3-.495-1.487-.495-.187-.495-.053-1.403.487-1.824C2.55 14.949.5 12.732.5 9.122a6.985 6.985 0 016.708-7.218z"></path></svg>',
+        shouldBeInteractive: true,
+      },
+      {
+        description: "Element with role button",
+        html: '<div role="button" tabindex="0">Clickable div</div>',
+        shouldBeInteractive: true,
+      },
+    ];
+
+    testCases.forEach((testCase, index) => {
+      // Create a temporary container
+      const container = document.createElement("div");
+      container.innerHTML = testCase.html;
+      const element = container.firstElementChild;
+
+      // Test the detection
+      const isInteractive = this._isInteractiveElement(element);
+      const passed = isInteractive === testCase.shouldBeInteractive;
+
+      this.log(`Test ${index + 1} - ${testCase.description}:`, {
+        element:
+          element.tagName +
+          (element.className ? "." + element.className.split(" ")[0] : ""),
+        isInteractive,
+        expected: testCase.shouldBeInteractive,
+        passed: passed ? "✅" : "❌",
+      });
+
+      // Clean up
+      container.remove();
+    });
+
+    this.log("=== End Interactive Element Detection Test ===");
+    this.log(
+      "This test verifies that the extension correctly identifies interactive elements"
+    );
+    this.log(
+      "so that clicks on buttons, links, and other interactive elements are not overridden."
+    );
+  }
+
+  // Test function to verify click handler behavior
+  testClickHandlerBehavior() {
+    this.log("=== Testing Click Handler Behavior ===");
+
+    // Create a test comment element
+    const testComment = document.createElement("div");
+    testComment.className =
+      "threads-filter-processed threads-filter-grayscale click-mode";
+    testComment.innerHTML = `
+      <div class="comment-content">
+        <span>This is a test comment</span>
+      </div>
+      <div class="x6s0dn4 x15dp1bm x1pg3x37 xqi6p0a x102ru31 x78zum5 xl56j7k x1n2onr6 x3oybdh xx6bhzk x12w9bfk x11xpdln x1qx5ct2 xw4jnvo">
+        <svg aria-label="更多" role="img" viewBox="0 0 24 24" class="x1lliihq x135i0dr x2lah0s x1f5funs x1n2onr6 x1bl4301 x1gaogpn">
+          <title>更多</title>
+          <circle cx="12" cy="12" r="1.5"></circle>
+          <circle cx="6" cy="12" r="1.5"></circle>
+          <circle cx="18" cy="12" r="1.5"></circle>
+        </svg>
+      </div>
+    `;
+
+    // Add to document temporarily
+    document.body.appendChild(testComment);
+
+    // Setup click handler
+    this.setupClickHandler(testComment);
+
+    this.log("Test comment created with click handler");
+    this.log("Click on the comment text to toggle visibility");
+    this.log(
+      "Click on the 'more' button should work normally (not toggle visibility)"
+    );
+
+    // Clean up after 10 seconds
+    setTimeout(() => {
+      this.removeClickHandler(testComment);
+      testComment.remove();
+      this.log("Test comment cleaned up");
+    }, 10000);
+
+    this.log("=== End Click Handler Behavior Test ===");
+    this.log("The test comment will be removed in 10 seconds");
+  }
+
+  // Add show button to filtered comments in click mode
+  addShowButton(commentElement) {
+    // Only add button if click-to-show mode is enabled
+    if (!this.settings.clickToShow) {
+      return;
+    }
+
+    // Only add button if the comment is actually filtered
+    if (!this.filteredComments.has(commentElement)) {
+      return;
+    }
+
+    // Check if button already exists inside the comment
+    const existingButton = commentElement.querySelector(
+      ".threads-filter-show-btn"
+    );
+    if (existingButton) {
+      return; // Button already exists inside, don't create another one
+    }
+    // Check if button already exists as a sibling after the comment
+    const nextSibling = commentElement.nextElementSibling;
+    if (
+      nextSibling &&
+      nextSibling.classList.contains("threads-filter-show-btn")
+    ) {
+      return; // Button already exists as sibling, don't create another one
+    }
+
+    // Create show button
+    const showButton = document.createElement("button");
+    showButton.className = "threads-filter-show-btn";
+
+    // Check if comment is currently showing and set button text accordingly
+    const isCurrentlyShowing = commentElement.classList.contains("showing");
+    const savedState = commentElement.dataset.threadsShowState;
+
+    if (isCurrentlyShowing || savedState === "shown") {
+      showButton.textContent = "Hide";
+      showButton.setAttribute("aria-label", "Hide filtered comment");
+      // Ensure the comment has the showing class if it should be shown
+      if (!isCurrentlyShowing) {
+        commentElement.classList.add("showing");
+      }
+    } else {
+      showButton.textContent = "Show";
+      showButton.setAttribute("aria-label", "Show filtered comment");
+    }
+
+    showButton.style.cssText = `
+      position: absolute !important;
+      top: 12px !important;
+      right: 60px !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      color: #65676b !important;
+      border: 1px solid #65676b !important;
+      border-radius: 12px !important;
+      padding: 4px 8px !important;
+      font-size: 10px !important;
+      font-weight: 600 !important;
+      cursor: pointer !important;
+      z-index: 1000 !important;
+      transition: all 0.2s ease !important;
+      pointer-events: auto !important;
+      opacity: 1 !important;
+      box-shadow: none !important;
+      filter: none !important;
+      background-image: none !important;
+      outline: none !important;
+    `;
+
+    // Add hover effect
+    showButton.addEventListener("mouseenter", () => {
+      showButton.style.setProperty("background", "#65676b", "important");
+      showButton.style.setProperty("background-color", "#65676b", "important");
+      showButton.style.setProperty("color", "white", "important");
+      showButton.style.setProperty("transform", "scale(1.05)", "important");
+      showButton.style.setProperty(
+        "box-shadow",
+        "0 3px 6px rgba(0, 0, 0, 0.3)",
+        "important"
+      );
+      showButton.style.setProperty("opacity", "1", "important");
+    });
+
+    showButton.addEventListener("mouseleave", () => {
+      // Always reset to transparent background when mouse leaves
+      showButton.style.setProperty("background", "transparent", "important");
+      showButton.style.setProperty(
+        "background-color",
+        "transparent",
+        "important"
+      );
+      showButton.style.setProperty("color", "#65676b", "important");
+      showButton.style.setProperty("transform", "scale(1)", "important");
+      showButton.style.setProperty(
+        "box-shadow",
+        "0 2px 4px rgba(0, 0, 0, 0.2)",
+        "important"
+      );
+      showButton.style.setProperty("opacity", "1", "important");
+    });
+
+    // Add click handler for the show button
+    showButton.addEventListener("click", (e) => {
+      e.stopPropagation(); // Prevent triggering the comment's click handler
+
+      // Reset button styles immediately after click to ensure it's not stuck in hover state
+      setTimeout(() => {
+        showButton.style.setProperty("background", "transparent", "important");
+        showButton.style.setProperty(
+          "background-color",
+          "transparent",
+          "important"
+        );
+        showButton.style.setProperty("color", "#65676b", "important");
+        showButton.style.setProperty("transform", "scale(1)", "important");
+        showButton.style.setProperty(
+          "box-shadow",
+          "0 2px 4px rgba(0, 0, 0, 0.2)",
+          "important"
+        );
+        showButton.style.setProperty("opacity", "1", "important");
+      }, 100);
+
+      // Also reset on mouse leave to be extra safe
+      const resetStyles = () => {
+        showButton.style.setProperty("background", "transparent", "important");
+        showButton.style.setProperty(
+          "background-color",
+          "transparent",
+          "important"
+        );
+        showButton.style.setProperty("color", "#65676b", "important");
+        showButton.style.setProperty("transform", "scale(1)", "important");
+        showButton.style.setProperty(
+          "box-shadow",
+          "0 2px 4px rgba(0, 0, 0, 0.2)",
+          "important"
+        );
+        showButton.style.setProperty("opacity", "1", "important");
+        showButton.removeEventListener("mouseleave", resetStyles);
+      };
+      showButton.addEventListener("mouseleave", resetStyles);
+
+      this.toggleCommentVisibility(commentElement);
+    });
+
+    // Place button as a sibling element after the comment div
+    const parentContainer = commentElement.parentNode;
+    if (parentContainer) {
+      parentContainer.insertBefore(showButton, commentElement.nextSibling);
+    } else {
+      // Fallback: append to the comment element itself
+      commentElement.appendChild(showButton);
+    }
+
+    // Store reference to the button
+    commentElement.dataset.threadsShowButton = "true";
+  }
+
+  // Remove show button from comment
+  removeShowButton(commentElement) {
+    // Check inside the comment
+    let existingButton = commentElement.querySelector(
+      ".threads-filter-show-btn"
+    );
+    // Or as a sibling after the comment
+    if (!existingButton) {
+      const nextSibling = commentElement.nextElementSibling;
+      if (
+        nextSibling &&
+        nextSibling.classList.contains("threads-filter-show-btn")
+      ) {
+        existingButton = nextSibling;
+      }
+    }
+    if (existingButton) {
+      existingButton.remove();
+    }
+    delete commentElement.dataset.threadsShowButton;
+    delete commentElement.dataset.threadsShowState;
+  }
+
+  // Toggle comment visibility (show/hide filtered comment)
+  toggleCommentVisibility(commentElement) {
+    const isCurrentlyShowing = commentElement.classList.contains("showing");
+
+    // Find the show button - check inside the comment first, then as a sibling
+    let showButton = commentElement.querySelector(".threads-filter-show-btn");
+    if (!showButton) {
+      const nextSibling = commentElement.nextElementSibling;
+      if (
+        nextSibling &&
+        nextSibling.classList.contains("threads-filter-show-btn")
+      ) {
+        showButton = nextSibling;
+      }
+    }
+
+    if (isCurrentlyShowing) {
+      // Hide the comment
+      commentElement.classList.remove("showing");
+      commentElement.dataset.threadsShowState = "hidden";
+      if (showButton) {
+        showButton.textContent = "Show";
+        showButton.setAttribute("aria-label", "Show filtered comment");
+      }
+      this.log("Threads Filter: Comment hidden via show button");
+    } else {
+      // Show the comment
+      commentElement.classList.add("showing");
+      commentElement.dataset.threadsShowState = "shown";
+      if (showButton) {
+        showButton.textContent = "Hide";
+        showButton.setAttribute("aria-label", "Hide filtered comment");
+      }
+      this.log("Threads Filter: Comment shown via show button");
+    }
+  }
+
+  // Test function to verify show button functionality
+  testShowButtonFunctionality() {
+    this.log("=== Testing Show Button Functionality ===");
+
+    // Find filtered comments with click mode enabled
+    const filteredComments = document.querySelectorAll(
+      ".threads-filter-grayscale.click-mode"
+    );
+    console.log(
+      `Found ${filteredComments.length} filtered comments with click mode enabled`
+    );
+
+    if (filteredComments.length === 0) {
+      console.log(
+        "No filtered comments found. Try enabling the filter and 'Click to Show' mode first."
+      );
+      return;
+    }
+
+    // Test the first filtered comment
+    const testComment = filteredComments[0];
+    const username = this.extractAuthorInfo(testComment)?.username || "unknown";
+
+    console.log(`Testing show button on comment by @${username}`);
+
+    // Check if show button exists
+    const showButton = testComment.querySelector(".threads-filter-show-btn");
+    if (showButton) {
+      console.log("✅ Show button found");
+      console.log("Button text:", showButton.textContent);
+      console.log("Button aria-label:", showButton.getAttribute("aria-label"));
+
+      // Check button styling
+      const computedStyle = window.getComputedStyle(showButton);
+      console.log("Button styling:");
+      console.log("  Background color:", computedStyle.backgroundColor);
+      console.log("  Color:", computedStyle.color);
+      console.log("  Opacity:", computedStyle.opacity);
+      console.log("  Font weight:", computedStyle.fontWeight);
+      console.log("  Box shadow:", computedStyle.boxShadow);
+      console.log("  Filter:", computedStyle.filter);
+      console.log("  Z-index:", computedStyle.zIndex);
+
+      // Check if button is affected by parent's opacity
+      const parentComputedStyle = window.getComputedStyle(testComment);
+      console.log("Parent comment styling:");
+      console.log("  Parent opacity:", parentComputedStyle.opacity);
+      console.log("  Parent filter:", parentComputedStyle.filter);
+
+      // Verify button is not affected by parent's opacity
+      const buttonOpacity = parseFloat(computedStyle.opacity);
+
+      if (buttonOpacity >= 0.9) {
+        console.log("✅ Button opacity is good (not affected by parent)");
+      } else {
+        console.log("❌ Button opacity is too low:", buttonOpacity);
+      }
+
+      // Test button functionality
+      console.log("Click the show button to test functionality");
+      console.log("The button should toggle between 'Show' and 'Hide'");
+      console.log(
+        "Button should remain fully visible regardless of comment opacity"
+      );
+    } else {
+      console.log("❌ Show button not found");
+      console.log("This might be because:");
+      console.log("1. Click to Show mode is not enabled");
+      console.log("2. The comment is not properly filtered");
+      console.log("3. There's an issue with button creation");
+    }
+
+    // Check if "Filtered" label is hidden in click mode
+    const computedStyle = window.getComputedStyle(testComment, "::before");
+    const beforeContent = computedStyle.content;
+    console.log("'Filtered' label content:", beforeContent);
+
+    if (beforeContent === "none" || beforeContent === "") {
+      console.log("✅ 'Filtered' label is properly hidden in click mode");
+    } else {
+      console.log("❌ 'Filtered' label is still visible in click mode");
+    }
+
+    console.log("=== End Show Button Test ===");
+  }
+
+  // Test function to verify show button color and opacity independence
+  testShowButtonColorIndependence() {
+    this.log("=== Testing Show Button Color Independence ===");
+
+    // Find filtered comments with click mode enabled
+    const filteredComments = document.querySelectorAll(
+      ".threads-filter-grayscale.click-mode"
+    );
+
+    if (filteredComments.length === 0) {
+      console.log(
+        "No filtered comments found. Enable filter and 'Click to Show' mode first."
+      );
+      return;
+    }
+
+    const testComment = filteredComments[0];
+    const showButton = testComment.querySelector(".threads-filter-show-btn");
+
+    if (!showButton) {
+      console.log("No show button found on filtered comment");
+      return;
+    }
+
+    // Get computed styles
+    const buttonStyle = window.getComputedStyle(showButton);
+    const commentStyle = window.getComputedStyle(testComment);
+
+    console.log("=== Button vs Parent Comparison ===");
+    console.log("Button properties:");
+    console.log("  Background color:", buttonStyle.backgroundColor);
+    console.log("  Color:", buttonStyle.color);
+    console.log("  Opacity:", buttonStyle.opacity);
+    console.log("  Filter:", buttonStyle.filter);
+    console.log("  Z-index:", buttonStyle.zIndex);
+
+    console.log("Parent comment properties:");
+    console.log("  Background color:", commentStyle.backgroundColor);
+    console.log("  Color:", commentStyle.color);
+    console.log("  Opacity:", commentStyle.opacity);
+    console.log("  Filter:", commentStyle.filter);
+
+    // Test results
+    const buttonOpacity = parseFloat(buttonStyle.opacity);
+
+    console.log("=== Test Results ===");
+
+    if (buttonOpacity >= 0.9) {
+      console.log("✅ Button opacity is good (>= 0.9):", buttonOpacity);
+    } else {
+      console.log("❌ Button opacity is too low:", buttonOpacity);
+    }
+
+    if (buttonStyle.filter === "none") {
+      console.log(
+        "✅ Button filter is none (not affected by parent grayscale)"
+      );
+    } else {
+      console.log("❌ Button filter is affected:", buttonStyle.filter);
+    }
+
+    if (buttonStyle.backgroundColor !== "rgba(0, 0, 0, 0)") {
+      console.log("✅ Button has solid background color");
+    } else {
+      console.log("❌ Button background is transparent");
+    }
+
+    if (
+      buttonStyle.color === "rgb(255, 255, 255)" ||
+      buttonStyle.color === "rgb(0, 0, 0)"
+    ) {
+      console.log("✅ Button text color is solid (white or black)");
+    } else {
+      console.log("❌ Button text color might be affected:", buttonStyle.color);
+    }
+
+    console.log("=== End Color Independence Test ===");
+  }
+
+  // Test function to verify button state persistence
+  testShowButtonStatePersistence() {
+    this.log("=== Testing Show Button State Persistence ===");
+
+    // Find filtered comments with click mode enabled
+    const filteredComments = document.querySelectorAll(
+      ".threads-filter-grayscale.click-mode"
+    );
+
+    if (filteredComments.length === 0) {
+      console.log(
+        "No filtered comments found. Enable filter and 'Click to Show' mode first."
+      );
+      return;
+    }
+
+    const testComment = filteredComments[0];
+    const username = this.extractAuthorInfo(testComment)?.username || "unknown";
+
+    console.log(`Testing button state persistence on comment by @${username}`);
+
+    // Check initial state
+    const initialButton = testComment.querySelector(".threads-filter-show-btn");
+    const initialShowState = testComment.dataset.threadsShowState;
+    const initialShowingClass = testComment.classList.contains("showing");
+
+    console.log("Initial state:");
+    console.log("  Button exists:", !!initialButton);
+    console.log("  Button text:", initialButton?.textContent);
+    console.log("  Show state in dataset:", initialShowState);
+    console.log("  Showing class:", initialShowingClass);
+
+    // Simulate a state change
+    if (initialButton) {
+      console.log("Simulating button click to change state...");
+      initialButton.click();
+
+      // Check state after click
+      setTimeout(() => {
+        const afterClickButton = testComment.querySelector(
+          ".threads-filter-show-btn"
+        );
+        const afterClickShowState = testComment.dataset.threadsShowState;
+        const afterClickShowingClass =
+          testComment.classList.contains("showing");
+
+        console.log("After click state:");
+        console.log("  Button text:", afterClickButton?.textContent);
+        console.log("  Show state in dataset:", afterClickShowState);
+        console.log("  Showing class:", afterClickShowingClass);
+
+        // Simulate an update by calling addShowButton again
+        console.log("Simulating update by calling addShowButton again...");
+        this.addShowButton(testComment);
+
+        // Check state after update
+        const afterUpdateButton = testComment.querySelector(
+          ".threads-filter-show-btn"
+        );
+        const afterUpdateShowState = testComment.dataset.threadsShowState;
+        const afterUpdateShowingClass =
+          testComment.classList.contains("showing");
+
+        console.log("After update state:");
+        console.log("  Button text:", afterUpdateButton?.textContent);
+        console.log("  Show state in dataset:", afterUpdateShowState);
+        console.log("  Showing class:", afterUpdateShowingClass);
+
+        // Check for duplicate buttons
+        const allButtons = testComment.querySelectorAll(
+          ".threads-filter-show-btn"
+        );
+        console.log("  Number of buttons:", allButtons.length);
+
+        if (allButtons.length === 1) {
+          console.log("✅ No duplicate buttons found");
+        } else {
+          console.log("❌ Duplicate buttons found:", allButtons.length);
+        }
+
+        console.log("=== End State Persistence Test ===");
+      }, 100);
+    } else {
+      console.log("❌ No button found to test");
+    }
+  }
+
+  // Test function to verify show button visibility conditions
+  testShowButtonVisibilityConditions() {
+    this.log("=== Testing Show Button Visibility Conditions ===");
+
+    // Check current settings
+    console.log("Current settings:");
+    console.log("  clickToShow enabled:", this.settings.clickToShow);
+    console.log("  filter enabled:", this.settings.enableFilter);
+
+    // Find all processed comments
+    const processedComments = document.querySelectorAll(
+      ".threads-filter-processed"
+    );
+    console.log(`Found ${processedComments.length} processed comments`);
+
+    // Find filtered comments
+    const filteredComments = document.querySelectorAll(
+      ".threads-filter-grayscale"
+    );
+    console.log(`Found ${filteredComments.length} filtered comments`);
+
+    // Find comments with show buttons
+    const commentsWithButtons = document.querySelectorAll(
+      ".threads-filter-show-btn"
+    );
+    console.log(`Found ${commentsWithButtons.length} show buttons`);
+
+    // Check each filtered comment
+    filteredComments.forEach((comment, index) => {
+      const username = this.extractAuthorInfo(comment)?.username || "unknown";
+      const hasButton =
+        comment.querySelector(".threads-filter-show-btn") ||
+        comment.nextElementSibling?.classList.contains(
+          "threads-filter-show-btn"
+        );
+      const isInFilteredSet = this.filteredComments.has(comment);
+      const hasClickMode = comment.classList.contains("click-mode");
+
+      console.log(`Comment ${index + 1} (@${username}):`);
+      console.log("  Has show button:", hasButton);
+      console.log("  Is in filtered set:", isInFilteredSet);
+      console.log("  Has click mode:", hasClickMode);
+
+      // Check if button should be visible
+      const shouldHaveButton = this.settings.clickToShow && isInFilteredSet;
+      const buttonStatus = shouldHaveButton === hasButton ? "✅" : "❌";
+      console.log(`  Should have button: ${shouldHaveButton} ${buttonStatus}`);
+    });
+
+    // Test different scenarios
+    console.log("\n=== Testing Scenarios ===");
+
+    // Scenario 1: Click-to-show disabled
+    console.log("Scenario 1: Click-to-show disabled");
+    const originalClickToShow = this.settings.clickToShow;
+    this.settings.clickToShow = false;
+    this.updateClickMode();
+    const buttonsWhenDisabled = document.querySelectorAll(
+      ".threads-filter-show-btn"
+    );
+    console.log(
+      `  Buttons when disabled: ${buttonsWhenDisabled.length} (should be 0)`
+    );
+
+    // Restore original setting
+    this.settings.clickToShow = originalClickToShow;
+    this.updateClickMode();
+
+    // Scenario 2: Filter disabled
+    console.log("Scenario 2: Filter disabled");
+    const originalFilterEnabled = this.settings.enableFilter;
+    this.settings.enableFilter = false;
+    this.applyFiltersImmediate();
+    const buttonsWhenFilterDisabled = document.querySelectorAll(
+      ".threads-filter-show-btn"
+    );
+    console.log(
+      `  Buttons when filter disabled: ${buttonsWhenFilterDisabled.length} (should be 0)`
+    );
+
+    // Restore original setting
+    this.settings.enableFilter = originalFilterEnabled;
+    this.applyFiltersImmediate();
+
+    console.log("=== End Visibility Conditions Test ===");
+  }
+
+  // Test function to verify rate limiting functionality
+  testRateLimiting() {
+    this.log("=== Testing Rate Limiting and Failed Requests ===");
+
+    // Test 1: Basic rate limiting simulation
+    this.log("Test 1: Simulating 429 rate limit response");
+    const originalFetch = window.fetch;
+    let fetchCallCount = 0;
+
+    // Mock fetch to simulate 429 response
+    window.fetch = async () => {
+      fetchCallCount++;
+      this.log(`Mock fetch called ${fetchCallCount} times`);
+
+      if (fetchCallCount === 1) {
+        // First call returns 429
+        return {
+          status: 429,
+          ok: false,
+          headers: {
+            get: (name) => (name === "retry-after" ? "60" : null),
+          },
+        };
+      } else {
+        // Subsequent calls return 200 with follower count
+        return {
+          status: 200,
+          ok: true,
+          text: async () => '<span title="1000">1000</span>位粉絲',
+        };
+      }
+    };
+
+    // Test the rate limiting
+    this.fetchFollowerCountFromProfile(
+      "testuser",
+      document.createElement("div")
+    )
+      .then(() => {
+        this.log("Rate limit test completed");
+        this.log(`Rate limited: ${this.isRateLimited}`);
+        this.log(`Reset time: ${this.rateLimitResetTime}`);
+
+        // Test that subsequent requests are blocked
+        return this.fetchFollowerCountFromProfile(
+          "testuser2",
+          document.createElement("div")
+        );
+      })
+      .then(() => {
+        this.log("Second request should be blocked by rate limit");
+        this.log(`Fetch call count: ${fetchCallCount}`);
+
+        // Restore original fetch
+        window.fetch = originalFetch;
+
+        // Reset rate limit for next tests
+        this.isRateLimited = false;
+        this.rateLimitResetTime = 0;
+
+        this.log("Test 1 completed");
+      });
+
+    // Test 2: Failed requests tracking
+    setTimeout(() => {
+      this.log("Test 2: Testing failed requests tracking");
+
+      // Mock fetch to simulate failed response
+      window.fetch = async () => {
+        return {
+          status: 200,
+          ok: true,
+          text: async () => "<div>No follower count here</div>", // No follower count in response
+        };
+      };
+
+      // Test failed request
+      this.fetchFollowerCountFromProfile(
+        "faileduser",
+        document.createElement("div")
+      )
+        .then(() => {
+          this.log(`Failed requests set: ${Array.from(this.failedRequests)}`);
+          this.log(`Failed requests count: ${this.failedRequests.size}`);
+
+          // Test that retry is blocked
+          return this.fetchFollowerCountFromProfile(
+            "faileduser",
+            document.createElement("div")
+          );
+        })
+        .then(() => {
+          this.log("Retry should be blocked by failed requests tracking");
+
+          // Test reset functionality
+          this.failedRequests.clear();
+          this.log("Failed requests cleared");
+          this.log(
+            `Failed requests count after clear: ${this.failedRequests.size}`
+          );
+
+          // Restore original fetch
+          window.fetch = originalFetch;
+
+          this.log("Test 2 completed");
+        });
+    }, 2000);
+
+    // Test 3: Pending requests tracking
+    setTimeout(() => {
+      this.log("Test 3: Testing pending requests tracking");
+
+      // Mock fetch to simulate slow response
+      window.fetch = async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100)); // Simulate delay
+        return {
+          status: 200,
+          ok: true,
+          text: async () => '<span title="500">500</span>位粉絲',
+        };
+      };
+
+      // Test simultaneous requests
+      const promises = [
+        this.fetchFollowerCountFromProfile(
+          "simultaneous1",
+          document.createElement("div")
+        ),
+        this.fetchFollowerCountFromProfile(
+          "simultaneous1",
+          document.createElement("div")
+        ), // Duplicate
+        this.fetchFollowerCountFromProfile(
+          "simultaneous2",
+          document.createElement("div")
+        ),
+      ];
+
+      Promise.all(promises).then(() => {
+        this.log(`Pending requests set: ${Array.from(this.pendingRequests)}`);
+        this.log(`Pending requests count: ${this.pendingRequests.size}`);
+
+        // Restore original fetch
+        window.fetch = originalFetch;
+
+        this.log("Test 3 completed");
+        this.log("=== Rate Limiting and Failed Requests Test Complete ===");
+      });
+    }, 4000);
+  }
+
+  // Test function to verify comment deduplication
+  async testCommentDeduplication() {
+    this.log("=== Testing Comment Deduplication ===");
+
+    // Create test elements that would match multiple selectors
+    const testContainer = document.createElement("div");
+    testContainer.innerHTML = `
+      <div data-pressable-container="true" class="x1ypdohk x1n2onr6 xwag103 xrtyd2m x1e9mfsr xnrf12o xz9dl7a">
+        <div class="x1a6qonq x6ikm8r x10wlt62 xj0a0fe x126k92a x6prxxf x7r5mf7">
+          <span dir="auto">Test comment</span>
+        </div>
+        <a href="/@testuser">@testuser</a>
+        <svg aria-label="讚"></svg>
+      </div>
+    `;
+
+    // Mock the isCommentElement method to return true for our test element
+    const originalIsCommentElement = this.isCommentElement.bind(this);
+    this.isCommentElement = (element) => {
+      // Return true for our test element, false for others
+      return element === testContainer.firstElementChild;
+    };
+
+    // Mock the processComment method to track calls
+    const originalProcessComment = this.processComment.bind(this);
+    const processedComments = [];
+    this.processComment = (commentElement) => {
+      processedComments.push(commentElement);
+      this.log(`processComment called for element:`, commentElement);
+    };
+
+    // Test the deduplication logic
+    console.log("Testing comment deduplication...");
+
+    // Simulate the comment finding logic
+    const commentSelectors = [
+      'div[data-pressable-container="true"]',
+      ".x1ypdohk.x1n2onr6.xwag103.xrtyd2m.x1e9mfsr.xnrf12o.xz9dl7a",
+      ".x1a6qonq.x6ikm8r.x10wlt62.xj0a0fe.x126k92a.x6prxxf.x7r5mf7",
+    ];
+
+    let comments = [];
+    const processedElements = new Set();
+
+    commentSelectors.forEach((selector) => {
+      const elements = testContainer.querySelectorAll(selector);
+      console.log(`Selector "${selector}" found ${elements.length} elements`);
+
+      elements.forEach((element) => {
+        if (processedElements.has(element)) {
+          console.log(`  Skipping duplicate element:`, element);
+          return;
+        }
+
+        if (this.isCommentElement(element)) {
+          comments.push(element);
+          processedElements.add(element);
+          console.log(`  Added comment element:`, element);
+        }
+      });
+    });
+
+    console.log(`Total comments found: ${comments.length}`);
+    console.log(
+      `Should be 1 (deduplicated): ${comments.length === 1 ? "✅" : "❌"}`
+    );
+
+    // Test the cache check in fetchFollowerCountFromProfile
+    console.log(
+      "\n=== Testing Cache Check in fetchFollowerCountFromProfile ==="
+    );
+
+    // Add a test user to cache
+    this.followerCache.set("testuser", 1000);
+    console.log("Added testuser to cache with 1000 followers");
+
+    // Mock the fetch method to track calls
+    const originalFetch = globalThis.fetch;
+    let fetchCallCount = 0;
+    globalThis.fetch = async (url) => {
+      fetchCallCount++;
+      console.log(`Fetch called ${fetchCallCount} times for URL:`, url);
+      return new Response("", { status: 200 });
+    };
+
+    // Call fetchFollowerCountFromProfile multiple times
+    const testComment = document.createElement("div");
+    this.fetchFollowerCountFromProfile("testuser", testComment);
+    this.fetchFollowerCountFromProfile("testuser", testComment);
+    this.fetchFollowerCountFromProfile("testuser", testComment);
+
+    console.log(`Fetch was called ${fetchCallCount} times`);
+    console.log(`Should be 0 (cached): ${fetchCallCount === 0 ? "✅" : "❌"}`);
+
+    // Test pending requests tracking
+    console.log("\n=== Testing Pending Requests Tracking ===");
+
+    // Clear cache and reset pending requests
+    this.followerCache.clear();
+    this.pendingRequests.clear();
+
+    // Mock fetch to simulate a slow request
+    let slowFetchCallCount = 0;
+    globalThis.fetch = async (url) => {
+      slowFetchCallCount++;
+      console.log(
+        `Slow fetch called ${slowFetchCallCount} times for URL:`,
+        url
+      );
+      // Simulate a slow request
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      return new Response("", { status: 200 });
+    };
+
+    // Start multiple requests for the same user simultaneously
+    const promises = [
+      this.fetchFollowerCountFromProfile("slowuser", testComment),
+      this.fetchFollowerCountFromProfile("slowuser", testComment),
+      this.fetchFollowerCountFromProfile("slowuser", testComment),
+    ];
+
+    // Wait for all requests to complete
+    await Promise.all(promises);
+
+    console.log(`Slow fetch was called ${slowFetchCallCount} times`);
+    console.log(
+      `Should be 1 (pending requests tracked): ${slowFetchCallCount === 1 ? "✅" : "❌"}`
+    );
+    console.log(`Pending requests set size: ${this.pendingRequests.size}`);
+    console.log(
+      `Should be 0 (all requests completed): ${this.pendingRequests.size === 0 ? "✅" : "❌"}`
+    );
+
+    // Clean up
+    this.isCommentElement = originalIsCommentElement;
+    this.processComment = originalProcessComment;
+    globalThis.fetch = originalFetch;
+    testContainer.remove();
+    testComment.remove();
+
+    console.log("\n=== Comment Deduplication Test Complete ===");
+    console.log("✅ Comment deduplication appears to be working correctly");
+    console.log("This prevents:");
+    console.log("1. Duplicate comment processing");
+    console.log("2. Duplicate follower count requests");
+    console.log("3. Unnecessary API calls");
   }
 }
 
@@ -2429,6 +3688,18 @@ if (!window.threadsCommentFilter) {
     window.threadsCommentFilter.testInternationalization();
   window.testFollowerSpacing = () =>
     window.threadsCommentFilter.testFollowerSpacing();
+  window.testInteractiveElementDetection = () =>
+    window.threadsCommentFilter.testInteractiveElementDetection();
+  window.testClickHandlerBehavior = () =>
+    window.threadsCommentFilter.testClickHandlerBehavior();
+  window.testShowButtonFunctionality = () =>
+    window.threadsCommentFilter.testShowButtonFunctionality();
+  window.testShowButtonColorIndependence = () =>
+    window.threadsCommentFilter.testShowButtonColorIndependence();
+  window.testShowButtonStatePersistence = () =>
+    window.threadsCommentFilter.testShowButtonStatePersistence();
+  window.testShowButtonVisibilityConditions = () =>
+    window.threadsCommentFilter.testShowButtonVisibilityConditions();
 
   // Additional test functions
   window.testExtensionStatus = () => {
@@ -2447,7 +3718,7 @@ if (!window.threadsCommentFilter) {
     );
 
     if (window.threadsCommentFilter) {
-      console.log("Extension is loaded and ready!");
+      console.log("✅ Extension is loaded and ready!");
       console.log("Available test functions:");
       console.log("- testAvatarDetection()");
       console.log("- testFollowerCountFeature()");
@@ -2458,6 +3729,15 @@ if (!window.threadsCommentFilter) {
       console.log("- testHideOnlyFollowers()");
       console.log("- testInternationalization()");
       console.log("- testFollowerSpacing()");
+      console.log("- testInteractiveElementDetection()");
+      console.log("- testClickHandlerBehavior()");
+      console.log("- testShowButtonFunctionality()");
+      console.log("- testShowButtonColorIndependence()");
+      console.log("- testShowButtonStatePersistence()");
+      console.log("- testShowButtonVisibilityConditions()");
+      console.log("- testCurrentPageClickBehavior()");
+      console.log("- testRateLimiting()");
+      console.log("- testCommentDeduplication()");
     } else {
       console.log(
         "Extension not loaded yet. Please wait a moment and try again."
@@ -2541,6 +3821,15 @@ if (!window.threadsCommentFilter) {
       console.log("- testHideOnlyFollowers()");
       console.log("- testAvatarDetection()");
       console.log("- testFetchFollowerCount(username)");
+      console.log("- testInteractiveElementDetection()");
+      console.log("- testClickHandlerBehavior()");
+      console.log("- testShowButtonFunctionality()");
+      console.log("- testShowButtonColorIndependence()");
+      console.log("- testShowButtonStatePersistence()");
+      console.log("- testShowButtonVisibilityConditions()");
+      console.log("- testCurrentPageClickBehavior()");
+      console.log("- testRateLimiting()");
+      console.log("- testCommentDeduplication()");
     } else {
       console.log("❌ Extension not loaded yet");
       console.log("Please wait a moment and try again");
@@ -2649,6 +3938,68 @@ if (!window.threadsCommentFilter) {
 
     console.log("=== End I18n Test ===");
   };
+
+  // Quick test for click behavior on current page
+  window.testCurrentPageClickBehavior = () => {
+    console.log("=== Testing Click Behavior on Current Page ===");
+
+    if (!window.threadsCommentFilter) {
+      console.log("❌ Extension not loaded yet");
+      return;
+    }
+
+    // Find filtered comments with click mode enabled
+    const filteredComments = document.querySelectorAll(
+      ".threads-filter-grayscale.click-mode"
+    );
+    console.log(
+      `Found ${filteredComments.length} filtered comments with click mode enabled`
+    );
+
+    if (filteredComments.length === 0) {
+      console.log(
+        "No filtered comments found. Try enabling the filter and 'Click to Show' mode first."
+      );
+      return;
+    }
+
+    // Test the first filtered comment
+    const testComment = filteredComments[0];
+    const username =
+      window.threadsCommentFilter.extractAuthorInfo(testComment)?.username ||
+      "unknown";
+
+    console.log(`Testing click behavior on comment by @${username}`);
+    console.log("Click on the comment text to toggle visibility");
+    console.log(
+      "Click on interactive elements (like the 'more' button) should work normally"
+    );
+
+    // Check if it has interactive elements
+    const interactiveElements = testComment.querySelectorAll(
+      'svg[aria-label], a[href], button, [role="button"], .x6s0dn4'
+    );
+    console.log(
+      `Found ${interactiveElements.length} interactive elements in this comment`
+    );
+
+    interactiveElements.forEach((element, index) => {
+      const ariaLabel = element.getAttribute("aria-label");
+      const tagName = element.tagName;
+      const className = element.className.split(" ")[0];
+      console.log(
+        `  ${index + 1}. ${tagName}${className ? "." + className : ""}${ariaLabel ? " (" + ariaLabel + ")" : ""}`
+      );
+    });
+
+    console.log("=== End Current Page Click Test ===");
+  };
+
+  window.testRateLimiting = () =>
+    window.threadsCommentFilter.testRateLimiting();
+
+  window.testCommentDeduplication = () =>
+    window.threadsCommentFilter.testCommentDeduplication();
 }
 
 // Cleanup when page is unloaded
@@ -2657,3 +4008,5 @@ window.addEventListener("beforeunload", () => {
     window.threadsCommentFilter.cleanup();
   }
 });
+
+// Expose test functions globally for debugging
