@@ -913,12 +913,66 @@ class ThreadsCommentFilter {
     };
 
     // Extract username from href attribute
-    const usernameLink = commentElement.querySelector('a[href*="/@"]');
-    if (usernameLink) {
-      const href = usernameLink.getAttribute("href");
-      const match = href.match(/\/@([^/]+)/);
-      if (match) {
-        authorInfo.username = match[1];
+    // Look for all username links and prioritize the actual author over reposter
+    const usernameLinks = commentElement.querySelectorAll('a[href*="/@"]');
+    this.log(`Found ${usernameLinks.length} username links in comment`);
+
+    if (usernameLinks.length > 0) {
+      // If there are multiple links, look for the one that's likely the actual author
+      // The actual author link is usually in a different context than the repost link
+      let authorLink = null;
+
+      for (let i = 0; i < usernameLinks.length; i++) {
+        const link = usernameLinks[i];
+        const href = link.getAttribute("href");
+        const match = href.match(/\/@([^/]+)/);
+        if (match) {
+          const username = match[1];
+          const linkText = link.textContent.trim();
+          const parentText = link.parentElement?.textContent || "";
+
+          this.log(
+            `Link ${i + 1}: username="${username}", text="${linkText}", parentText="${parentText.substring(0, 50)}..."`
+          );
+
+          // Check if this link is in a context that suggests it's the actual author
+          // Look for links that are not in repost context (usually have different styling or position)
+          // If the link text doesn't contain repost indicators and is not in a repost context
+          if (
+            !parentText.includes("轉發") &&
+            !parentText.includes("reposted") &&
+            !linkText.includes("轉發") &&
+            !linkText.includes("reposted")
+          ) {
+            authorLink = link;
+            this.log(
+              `Selected link ${i + 1} as author link (no repost indicators)`
+            );
+            break;
+          } else {
+            this.log(`Skipped link ${i + 1} (contains repost indicators)`);
+          }
+        }
+      }
+
+      // If we didn't find a clear author link, use the last one (usually the actual author)
+      if (!authorLink && usernameLinks.length > 1) {
+        authorLink = usernameLinks[usernameLinks.length - 1];
+        this.log(
+          `No clear author link found, using last link (index ${usernameLinks.length - 1})`
+        );
+      } else if (!authorLink) {
+        authorLink = usernameLinks[0];
+        this.log(`No clear author link found, using first link`);
+      }
+
+      if (authorLink) {
+        const href = authorLink.getAttribute("href");
+        const match = href.match(/\/@([^/]+)/);
+        if (match) {
+          authorInfo.username = match[1];
+          this.log(`Final selected username: ${authorInfo.username}`);
+        }
       }
     }
 
@@ -4010,6 +4064,38 @@ class ThreadsCommentFilter {
     this.log(`Restored enableFilter to: ${this.settings.enableFilter}`);
 
     this.log("=== End Enable Filter Behavior Test ===");
+  }
+
+  // Test function for username extraction logic
+  testUsernameExtraction() {
+    this.log("=== Testing Username Extraction Logic ===");
+
+    // Create a mock DOM element similar to the user's example
+    const mockCommentElement = document.createElement("div");
+    mockCommentElement.innerHTML = `
+      <div>
+        <a href="/@726voteyes_twrecallelection">
+          <span>726voteyes_twrecallelection</span>
+          <span> 在 2 小時前轉發</span>
+        </a>
+      </div>
+      <div>
+        <a href="/@jane_109_133">
+          <span>jane_109_133</span>
+        </a>
+      </div>
+    `;
+
+    // Test the extraction
+    const authorInfo = this.extractAuthorInfo(mockCommentElement);
+
+    this.log("Test Results:", {
+      expectedUsername: "jane_109_133",
+      actualUsername: authorInfo.username,
+      passed: authorInfo.username === "jane_109_133" ? "✅" : "❌",
+    });
+
+    return authorInfo.username === "jane_109_133";
   }
 }
 
