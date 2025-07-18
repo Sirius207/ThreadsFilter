@@ -4063,32 +4063,85 @@ class ThreadsCommentFilter {
   testUsernameExtraction() {
     this.log("=== Testing Username Extraction Logic ===");
 
-    // Create a mock DOM element similar to the user's example
-    const mockCommentElement = document.createElement("div");
-    mockCommentElement.innerHTML = `
-      <div>
-        <a href="/@726voteyes_twrecallelection">
-          <span>726voteyes_twrecallelection</span>
-          <span> 在 2 小時前轉發</span>
-        </a>
-      </div>
-      <div>
-        <a href="/@jane_109_133">
-          <span>jane_109_133</span>
-        </a>
-      </div>
-    `;
+    const testCases = [
+      {
+        name: "Repost with author link (Chinese)",
+        html: `
+          <div>
+            <a href="/@726voteyes_twrecallelection">
+              <span>726voteyes_twrecallelection</span>
+              <span> 在 2 小時前轉發</span>
+            </a>
+          </div>
+          <div>
+            <a href="/@jane_109_133">
+              <span>jane_109_133</span>
+            </a>
+          </div>
+        `,
+        expected: "jane_109_133",
+      },
+      {
+        name: "Repost with author link (English)",
+        html: `
+          <div>
+            <a href="/@reposter_user">
+              <span>reposter_user</span>
+              <span>reposted</span>
+            </a>
+          </div>
+          <div>
+            <a href="/@actual_author">
+              <span>actual_author</span>
+            </a>
+          </div>
+        `,
+        expected: "actual_author",
+      },
+      {
+        name: "Multiple repost links (fallback to last)",
+        html: `
+          <div><a href="/@reposter1"><span>reposter1 reposter</span></a></div>
+          <div><a href="/@reposter2"><span>reposted by reposter2</span></a></div>
+        `,
+        expected: "reposter2",
+      },
+      {
+        name: "Single non-repost link",
+        html: `<div><a href="/@single_user"><span>single_user</span></a></div>`,
+        expected: "single_user",
+      },
+      {
+        name: "No links",
+        html: `<div>Just some text</div>`,
+        expected: null,
+      },
+    ];
 
-    // Test the extraction
-    const authorInfo = this.extractAuthorInfo(mockCommentElement);
+    let allPassed = true;
 
-    this.log("Test Results:", {
-      expectedUsername: "jane_109_133",
-      actualUsername: authorInfo.username,
-      passed: authorInfo.username === "jane_109_133" ? "✅" : "❌",
-    });
+    for (const { name, html, expected } of testCases) {
+      const mockCommentElement = document.createElement("div");
+      mockCommentElement.innerHTML = html;
+      const authorInfo = this.extractAuthorInfo(mockCommentElement);
+      const actual = authorInfo.username;
+      const passed = actual === expected;
 
-    return authorInfo.username === "jane_109_133";
+      if (!passed) {
+        allPassed = false;
+      }
+
+      this.log(`Test Case: "${name}"`, {
+        expectedUsername: expected,
+        actualUsername: actual,
+        passed: passed ? "✅" : "❌",
+      });
+    }
+
+    this.log(
+      `=== Overall Test Result: ${allPassed ? "✅ PASSED" : "❌ FAILED"} ===`
+    );
+    return allPassed;
   }
 }
 
