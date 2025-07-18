@@ -918,61 +918,54 @@ class ThreadsCommentFilter {
     this.log(`Found ${usernameLinks.length} username links in comment`);
 
     if (usernameLinks.length > 0) {
-      // If there are multiple links, look for the one that's likely the actual author
-      // The actual author link is usually in a different context than the repost link
-      let authorLink = null;
+      let finalUsername = null;
 
-      for (let i = 0; i < usernameLinks.length; i++) {
-        const link = usernameLinks[i];
+      const authorCandidate = Array.from(usernameLinks).find((link, i) => {
         const href = link.getAttribute("href");
         const match = href.match(/\/@([^/]+)/);
-        if (match) {
-          const username = match[1];
-          const linkText = link.textContent.trim();
-          const parentText = link.parentElement?.textContent || "";
+        if (!match) return false;
 
-          this.log(
-            `Link ${i + 1}: username="${username}", text="${linkText}", parentText="${parentText.substring(0, 50)}..."`
-          );
+        const username = match[1];
+        const linkText = link.textContent.trim();
+        const parentText = link.parentElement?.textContent || "";
 
-          // Check if this link is in a context that suggests it's the actual author
-          // Look for links that are not in repost context (usually have different styling or position)
-          // If the link text doesn't contain repost indicators and is not in a repost context
-          if (
-            !parentText.includes("轉發") &&
-            !parentText.includes("reposted") &&
-            !linkText.includes("轉發") &&
-            !linkText.includes("reposted")
-          ) {
-            authorLink = link;
-            this.log(
-              `Selected link ${i + 1} as author link (no repost indicators)`
-            );
-            break;
-          } else {
-            this.log(`Skipped link ${i + 1} (contains repost indicators)`);
-          }
+        this.log(
+          `Link ${i + 1}: username="${username}", text="${linkText}", parentText="${parentText.substring(0, 50)}..."`
+        );
+
+        const isRepost =
+          parentText.includes("轉發") ||
+          parentText.includes("reposted") ||
+          linkText.includes("轉發") ||
+          linkText.includes("reposted");
+
+        if (isRepost) {
+          this.log(`Skipped link ${i + 1} (contains repost indicators)`);
+          return false;
         }
-      }
 
-      // If we didn't find a clear author link, use the last one (usually the actual author)
-      if (!authorLink && usernameLinks.length > 1) {
-        authorLink = usernameLinks[usernameLinks.length - 1];
+        finalUsername = username; // Store username from the valid link
+        this.log(
+          `Selected link ${i + 1} as author link (no repost indicators)`
+        );
+        return true;
+      });
+
+      if (!authorCandidate && usernameLinks.length > 0) {
+        const fallbackLink = usernameLinks[usernameLinks.length - 1];
         this.log(
           `No clear author link found, using last link (index ${usernameLinks.length - 1})`
         );
-      } else if (!authorLink) {
-        authorLink = usernameLinks[0];
-        this.log(`No clear author link found, using first link`);
-      }
-
-      if (authorLink) {
-        const href = authorLink.getAttribute("href");
+        const href = fallbackLink.getAttribute("href");
         const match = href.match(/\/@([^/]+)/);
         if (match) {
-          authorInfo.username = match[1];
-          this.log(`Final selected username: ${authorInfo.username}`);
+          finalUsername = match[1];
         }
+      }
+
+      if (finalUsername) {
+        authorInfo.username = finalUsername;
+        this.log(`Final selected username: ${authorInfo.username}`);
       }
     }
 
