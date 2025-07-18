@@ -963,6 +963,15 @@ class ThreadsCommentFilter {
     return authorInfo;
   }
 
+  // Private helper method to clear follower fetch debounce timer
+  _clearFollowerFetchDebounce(username) {
+    const timer = this.followerFetchDebounce.get(username);
+    if (timer) {
+      clearTimeout(timer);
+      this.followerFetchDebounce.delete(username);
+    }
+  }
+
   extractFollowerCount(commentElement, username) {
     this.log(`extractFollowerCount called for @${username}`);
 
@@ -1000,10 +1009,7 @@ class ThreadsCommentFilter {
       } else {
         this.log(`Skipping fetch for @${username} - currently rate limited`);
         // Clear the debounce timer since we're not making the request
-        if (this.followerFetchDebounce.has(username)) {
-          clearTimeout(this.followerFetchDebounce.get(username));
-          this.followerFetchDebounce.delete(username);
-        }
+        this._clearFollowerFetchDebounce(username);
         return null; // Return null and don't attempt to fetch
       }
     }
@@ -1032,9 +1038,7 @@ class ThreadsCommentFilter {
     );
 
     // Clear existing debounce timer for this username
-    if (this.followerFetchDebounce.has(username)) {
-      clearTimeout(this.followerFetchDebounce.get(username));
-    }
+    this._clearFollowerFetchDebounce(username);
 
     // Set new debounce timer
     const debounceTimer = setTimeout(() => {
@@ -1056,10 +1060,7 @@ class ThreadsCommentFilter {
           `Follower count for @${username} already cached (${this.followerCache.get(username)}), skipping fetch`
         );
         // Clear the debounce timer since we're not making the request
-        if (this.followerFetchDebounce.has(username)) {
-          clearTimeout(this.followerFetchDebounce.get(username));
-          this.followerFetchDebounce.delete(username);
-        }
+        this._clearFollowerFetchDebounce(username);
         return;
       }
 
@@ -1069,10 +1070,7 @@ class ThreadsCommentFilter {
           `Request for @${username} already in progress, skipping duplicate request`
         );
         // Clear the debounce timer since we're not making the request
-        if (this.followerFetchDebounce.has(username)) {
-          clearTimeout(this.followerFetchDebounce.get(username));
-          this.followerFetchDebounce.delete(username);
-        }
+        this._clearFollowerFetchDebounce(username);
         return;
       }
 
@@ -1080,10 +1078,7 @@ class ThreadsCommentFilter {
       if (this.failedRequests.has(username)) {
         this.log(`Request for @${username} previously failed, skipping retry`);
         // Clear the debounce timer since we're not making the request
-        if (this.followerFetchDebounce.has(username)) {
-          clearTimeout(this.followerFetchDebounce.get(username));
-          this.followerFetchDebounce.delete(username);
-        }
+        this._clearFollowerFetchDebounce(username);
         return;
       }
 
@@ -1100,10 +1095,7 @@ class ThreadsCommentFilter {
         } else {
           this.log(`Skipping fetch for @${username} - currently rate limited`);
           // Clear the debounce timer since we're not making the request
-          if (this.followerFetchDebounce.has(username)) {
-            clearTimeout(this.followerFetchDebounce.get(username));
-            this.followerFetchDebounce.delete(username);
-          }
+          this._clearFollowerFetchDebounce(username);
           return null; // Return null and don't attempt to fetch
         }
       }
@@ -1115,10 +1107,7 @@ class ThreadsCommentFilter {
       );
 
       // Clear the debounce timer since we're actually making the request
-      if (this.followerFetchDebounce.has(username)) {
-        clearTimeout(this.followerFetchDebounce.get(username));
-        this.followerFetchDebounce.delete(username);
-      }
+      this._clearFollowerFetchDebounce(username);
 
       // Fetch the user profile page
       const response = await fetch(`https://www.threads.com/@${username}`, {
@@ -1162,10 +1151,7 @@ class ThreadsCommentFilter {
         this.pendingRequests.delete(username);
 
         // Clear the debounce timer since we're not proceeding
-        if (this.followerFetchDebounce.has(username)) {
-          clearTimeout(this.followerFetchDebounce.get(username));
-          this.followerFetchDebounce.delete(username);
-        }
+        this._clearFollowerFetchDebounce(username);
 
         return;
       }
@@ -1237,10 +1223,7 @@ class ThreadsCommentFilter {
       );
 
       // Clear the debounce timer if it still exists
-      if (this.followerFetchDebounce.has(username)) {
-        clearTimeout(this.followerFetchDebounce.get(username));
-        this.followerFetchDebounce.delete(username);
-      }
+      this._clearFollowerFetchDebounce(username);
     }
   }
 
@@ -3790,10 +3773,7 @@ class ThreadsCommentFilter {
     this.followerCache.delete(testUsername);
     this.pendingRequests.delete(testUsername);
     this.failedRequests.delete(testUsername);
-    if (this.followerFetchDebounce.has(testUsername)) {
-      clearTimeout(this.followerFetchDebounce.get(testUsername));
-      this.followerFetchDebounce.delete(testUsername);
-    }
+    this._clearFollowerFetchDebounce(testUsername);
 
     // Simulate multiple rapid calls to extractFollowerCount
     this.log("Making multiple rapid calls to extractFollowerCount...");
@@ -3850,10 +3830,7 @@ class ThreadsCommentFilter {
       this.followerCache.delete(testUsername);
       this.pendingRequests.delete(testUsername);
       this.failedRequests.delete(testUsername);
-      if (this.followerFetchDebounce.has(testUsername)) {
-        clearTimeout(this.followerFetchDebounce.get(testUsername));
-        this.followerFetchDebounce.delete(testUsername);
-      }
+      this._clearFollowerFetchDebounce(testUsername);
 
       this.log("=== End Debounce Test ===");
     }, 200); // Wait longer than the 100ms debounce delay
