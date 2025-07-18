@@ -5,6 +5,66 @@ All notable changes to the Threads Comment Filter extension will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2025-01-27
+
+### Fixed
+
+- **Duplicate Fetch Requests for Same Username**
+  - Fixed issue where multiple comments by the same user triggered multiple fetch requests
+  - Added debounce mechanism to prevent simultaneous fetch requests for the same username
+  - Implemented 100ms debounce delay to batch multiple rapid calls into single request
+  - Added comprehensive request tracking with pending requests and failed requests sets
+  - Enhanced logging to track debounce timer creation and cleanup
+
+- **Click-to-Show Button Display Issues**
+  - Fixed issue where Show buttons were not displaying in click-to-show mode
+  - Simplified button addition logic by removing complex state management
+  - Removed unnecessary `threadsShowButtonPending` and `threadsShowButtonAdded` state tracking
+  - Ensured buttons are properly added when comments are filtered in click-to-show mode
+
+- **Observer Re-triggering Prevention**
+  - Identified root cause: DOM changes from button addition triggered Observer re-processing
+  - Implemented dual solution: DOM-based prevention + debounce backup
+  - Added comprehensive cleanup for debounce timers in all scenarios
+  - Enhanced error handling for rate limiting and failed requests
+
+### Added
+
+- **Enhanced Debugging and Testing**
+  - Added `testFollowerFetchDebounce()` function to verify debounce mechanism
+  - Added `testClickToShowDOMImpact()` function to test DOM change impact
+  - Added `testSolutionComparison()` function to compare solution approaches
+  - Enhanced logging throughout fetch and filter processes
+  - Added detailed tracking of pending requests and debounce timers
+
+- **Robust Request Management**
+  - Added `followerFetchDebounce` Map to track debounce timers per username
+  - Implemented proper cleanup in `cleanup()` method for all debounce timers
+  - Added cleanup in error handling and rate limiting scenarios
+  - Enhanced `extractFollowerCount()` with pending request checks
+
+### Changed
+
+- **Code Architecture Improvements**
+  - Simplified `applyFilterStyle()` method by removing complex button state management
+  - Streamlined `updateClickMode()` method for better maintainability
+  - Removed unnecessary pending button logic from `applyFiltersImmediate()`
+  - Enhanced `fetchFollowerCountFromProfile()` with better error handling and cleanup
+
+- **Performance Optimizations**
+  - Reduced unnecessary DOM changes during initial comment processing
+  - Improved request deduplication to prevent API rate limiting
+  - Enhanced memory management with proper timer cleanup
+  - Optimized Observer behavior to reduce unnecessary re-processing
+
+### Technical Details
+
+- **Debounce Implementation**: 100ms delay with proper timer management
+- **Request Tracking**: Pending requests, failed requests, and cache management
+- **DOM Change Prevention**: Avoid button addition during initial processing
+- **Dual Protection**: DOM-based prevention + debounce mechanism as backup
+- **Comprehensive Cleanup**: Timer cleanup in all scenarios including errors and rate limiting
+
 ## [1.1.0] - 2025-07-17
 
 ### Added
