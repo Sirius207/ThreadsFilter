@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Username Extraction in Repost Scenarios**
+  - Fixed issue where reposter username was incorrectly selected instead of actual author username
+  - Modified `extractAuthorInfo` to check all username links in a comment and prioritize actual author
+  - Added logic to detect and skip links containing "轉發" (repost) or "reposted" indicators
+  - Enhanced username extraction to handle comments with multiple username links (e.g., reposter and actual author)
+  - Added detailed logging for debugging username extraction process
+  - Added `testUsernameExtraction()` method to verify the logic works correctly
+
 - **Duplicate Fetch Requests for Same Username**
   - Fixed issue where multiple comments by the same user triggered multiple fetch requests
   - Added debounce mechanism to prevent simultaneous fetch requests for the same username

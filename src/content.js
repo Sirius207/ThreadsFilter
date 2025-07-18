@@ -913,12 +913,59 @@ class ThreadsCommentFilter {
     };
 
     // Extract username from href attribute
-    const usernameLink = commentElement.querySelector('a[href*="/@"]');
-    if (usernameLink) {
-      const href = usernameLink.getAttribute("href");
-      const match = href.match(/\/@([^/]+)/);
-      if (match) {
-        authorInfo.username = match[1];
+    // Look for all username links and prioritize the actual author over reposter
+    const usernameLinks = commentElement.querySelectorAll('a[href*="/@"]');
+    this.log(`Found ${usernameLinks.length} username links in comment`);
+
+    if (usernameLinks.length > 0) {
+      let finalUsername = null;
+
+      const authorCandidate = Array.from(usernameLinks).find((link, i) => {
+        const href = link.getAttribute("href");
+        const match = href.match(/\/@([^/]+)/);
+        if (!match) return false;
+
+        const username = match[1];
+        const linkText = link.textContent.trim();
+        const parentText = link.parentElement?.textContent || "";
+
+        this.log(
+          `Link ${i + 1}: username="${username}", text="${linkText}", parentText="${parentText.substring(0, 50)}..."`
+        );
+
+        const isRepost =
+          parentText.includes("轉發") ||
+          parentText.includes("reposted") ||
+          linkText.includes("轉發") ||
+          linkText.includes("reposted");
+
+        if (isRepost) {
+          this.log(`Skipped link ${i + 1} (contains repost indicators)`);
+          return false;
+        }
+
+        finalUsername = username; // Store username from the valid link
+        this.log(
+          `Selected link ${i + 1} as author link (no repost indicators)`
+        );
+        return true;
+      });
+
+      if (!authorCandidate && usernameLinks.length > 0) {
+        const fallbackLink = usernameLinks[usernameLinks.length - 1];
+        this.log(
+          `No clear author link found, using last link (index ${usernameLinks.length - 1})`
+        );
+        const href = fallbackLink.getAttribute("href");
+        const match = href.match(/\/@([^/]+)/);
+        if (match) {
+          finalUsername = match[1];
+        }
+      }
+
+      if (finalUsername) {
+        authorInfo.username = finalUsername;
+        this.log(`Final selected username: ${authorInfo.username}`);
       }
     }
 
@@ -4010,6 +4057,91 @@ class ThreadsCommentFilter {
     this.log(`Restored enableFilter to: ${this.settings.enableFilter}`);
 
     this.log("=== End Enable Filter Behavior Test ===");
+  }
+
+  // Test function for username extraction logic
+  testUsernameExtraction() {
+    this.log("=== Testing Username Extraction Logic ===");
+
+    const testCases = [
+      {
+        name: "Repost with author link (Chinese)",
+        html: `
+          <div>
+            <a href="/@726voteyes_twrecallelection">
+              <span>726voteyes_twrecallelection</span>
+              <span> 在 2 小時前轉發</span>
+            </a>
+          </div>
+          <div>
+            <a href="/@jane_109_133">
+              <span>jane_109_133</span>
+            </a>
+          </div>
+        `,
+        expected: "jane_109_133",
+      },
+      {
+        name: "Repost with author link (English)",
+        html: `
+          <div>
+            <a href="/@reposter_user">
+              <span>reposter_user</span>
+              <span>reposted</span>
+            </a>
+          </div>
+          <div>
+            <a href="/@actual_author">
+              <span>actual_author</span>
+            </a>
+          </div>
+        `,
+        expected: "actual_author",
+      },
+      {
+        name: "Multiple repost links (fallback to last)",
+        html: `
+          <div><a href="/@reposter1"><span>reposter1 reposter</span></a></div>
+          <div><a href="/@reposter2"><span>reposted by reposter2</span></a></div>
+        `,
+        expected: "reposter2",
+      },
+      {
+        name: "Single non-repost link",
+        html: `<div><a href="/@single_user"><span>single_user</span></a></div>`,
+        expected: "single_user",
+      },
+      {
+        name: "No links",
+        html: `<div>Just some text</div>`,
+        expected: null,
+      },
+    ];
+
+    let allPassed = true;
+
+    for (const { name, html, expected } of testCases) {
+      const mockCommentElement = document.createElement("div");
+      mockCommentElement.innerHTML = html;
+      const authorInfo = this.extractAuthorInfo(mockCommentElement);
+      const actual = authorInfo.username;
+      const passed = actual === expected;
+
+      if (!passed) {
+        allPassed = false;
+      }
+
+      this.log(`Test Case: "${name}"`, {
+        expectedUsername: expected,
+        actualUsername: actual,
+        passed: passed ? "✅" : "❌",
+      });
+    }
+
+    this.log(
+      `=== Overall Test Result: ${allPassed ? "✅ PASSED" : "❌ FAILED"} ===`
+    );
+    return allPassed;
   }
 }
 
