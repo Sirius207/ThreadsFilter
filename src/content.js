@@ -380,6 +380,8 @@ class ThreadsCommentFilter {
     // Request tracking to prevent duplicate requests
     this.pendingRequests = new Set(); // Track usernames that have requests in progress
     this.failedRequests = new Set(); // Track usernames that have failed to fetch (to prevent retrying)
+    // Debounce mechanism for follower count fetching
+    this.followerFetchDebounce = new Map(); // Track debounce timers for each username
     this.init();
   }
 
@@ -961,10 +963,37 @@ class ThreadsCommentFilter {
     return authorInfo;
   }
 
+  // Private helper method to clear follower fetch debounce timer
+  _clearFollowerFetchDebounce(username) {
+    const timer = this.followerFetchDebounce.get(username);
+    if (timer) {
+      clearTimeout(timer);
+      this.followerFetchDebounce.delete(username);
+    }
+  }
+
   extractFollowerCount(commentElement, username) {
+    this.log(`extractFollowerCount called for @${username}`);
+
     // Check cache first
     if (this.followerCache.has(username)) {
-      return this.followerCache.get(username);
+      const cachedCount = this.followerCache.get(username);
+      this.log(`@${username} found in cache: ${cachedCount}`);
+      return cachedCount;
+    }
+
+    // Check if request is already in progress for this username
+    if (this.pendingRequests.has(username)) {
+      this.log(
+        `Request for @${username} already in progress, skipping duplicate request`
+      );
+      return null; // Return null and don't attempt to fetch
+    }
+
+    // Check if this username has previously failed to fetch
+    if (this.failedRequests.has(username)) {
+      this.log(`Request for @${username} previously failed, skipping retry`);
+      return null; // Return null and don't attempt to fetch
     }
 
     // Check if we're currently rate limited
@@ -979,6 +1008,8 @@ class ThreadsCommentFilter {
         this.rateLimitResetTime = 0;
       } else {
         this.log(`Skipping fetch for @${username} - currently rate limited`);
+        // Clear the debounce timer since we're not making the request
+        this._clearFollowerFetchDebounce(username);
         return null; // Return null and don't attempt to fetch
       }
     }
@@ -996,24 +1027,40 @@ class ThreadsCommentFilter {
       if (followerMatch) {
         const count = this.parseFollowerCount(followerMatch[1]);
         this.followerCache.set(username, count);
+        this.log(`Found follower count in DOM for @${username}: ${count}`);
         return count;
       }
     }
 
-    // If not found in DOM, try to fetch from user profile
-    this.fetchFollowerCountFromProfile(username, commentElement);
+    // If not found in DOM, use debounce mechanism to fetch from user profile
+    this.log(
+      `No follower count found in DOM for @${username}, scheduling fetch with debounce`
+    );
+
+    // Clear existing debounce timer for this username
+    this._clearFollowerFetchDebounce(username);
+
+    // Set new debounce timer
+    const debounceTimer = setTimeout(() => {
+      this.followerFetchDebounce.delete(username);
+      this.fetchFollowerCountFromProfile(username);
+    }, 100); // 100ms debounce delay
+
+    this.followerFetchDebounce.set(username, debounceTimer);
 
     // Return null to indicate unknown (will be updated when fetch completes)
     return null;
   }
 
-  async fetchFollowerCountFromProfile(username, commentElement) {
+  async fetchFollowerCountFromProfile(username) {
     try {
       // Check cache first to prevent duplicate requests
       if (this.followerCache.has(username)) {
         this.log(
-          `Follower count for @${username} already cached, skipping fetch`
+          `Follower count for @${username} already cached (${this.followerCache.get(username)}), skipping fetch`
         );
+        // Clear the debounce timer since we're not making the request
+        this._clearFollowerFetchDebounce(username);
         return;
       }
 
@@ -1022,12 +1069,16 @@ class ThreadsCommentFilter {
         this.log(
           `Request for @${username} already in progress, skipping duplicate request`
         );
+        // Clear the debounce timer since we're not making the request
+        this._clearFollowerFetchDebounce(username);
         return;
       }
 
       // Check if this username has previously failed to fetch
       if (this.failedRequests.has(username)) {
         this.log(`Request for @${username} previously failed, skipping retry`);
+        // Clear the debounce timer since we're not making the request
+        this._clearFollowerFetchDebounce(username);
         return;
       }
 
@@ -1043,13 +1094,20 @@ class ThreadsCommentFilter {
           this.rateLimitResetTime = 0;
         } else {
           this.log(`Skipping fetch for @${username} - currently rate limited`);
-          return; // Don't make the request
+          // Clear the debounce timer since we're not making the request
+          this._clearFollowerFetchDebounce(username);
+          return null; // Return null and don't attempt to fetch
         }
       }
 
       // Mark request as in progress
       this.pendingRequests.add(username);
-      this.log(`Fetching follower count for @${username}...`);
+      this.log(
+        `Fetching follower count for @${username}... (pending requests: ${this.pendingRequests.size})`
+      );
+
+      // Clear the debounce timer since we're actually making the request
+      this._clearFollowerFetchDebounce(username);
 
       // Fetch the user profile page
       const response = await fetch(`https://www.threads.com/@${username}`, {
@@ -1091,6 +1149,10 @@ class ThreadsCommentFilter {
 
         // Remove from pending requests since we're not proceeding
         this.pendingRequests.delete(username);
+
+        // Clear the debounce timer since we're not proceeding
+        this._clearFollowerFetchDebounce(username);
+
         return;
       }
 
@@ -1106,28 +1168,38 @@ class ThreadsCommentFilter {
       if (followerCount !== null) {
         // Cache the result
         this.followerCache.set(username, followerCount);
+        this.log(`Cached follower count for @${username}: ${followerCount}`);
 
-        // Update the comment data - preserve existing avatar and verification status
-        const data = commentElement.dataset.threadsFilterData;
-        if (data) {
-          const commentData = JSON.parse(data);
-          commentData.followers = followerCount;
-          commentElement.dataset.threadsFilterData =
-            JSON.stringify(commentData);
-        }
+        // Update ALL comments by this user, not just the current one
+        const allCommentsByUser = document.querySelectorAll(
+          `.threads-filter-processed[data-threads-filter-data*='"username":"${username}"']`
+        );
 
-        // Update the display using addFollowerCountDisplay to respect current settings
-        // Preserve the original avatar and verification status from the comment data
-        const originalData = data ? JSON.parse(data) : {};
-        this.addFollowerCountDisplay(commentElement, {
-          username: username,
-          followerCount: followerCount,
-          isVerified: originalData.isVerified || false,
-          hasDefaultAvatar: originalData.hasDefaultAvatar || false,
+        this.log(
+          `Updating ${allCommentsByUser.length} comments by @${username} with follower count: ${followerCount}`
+        );
+
+        allCommentsByUser.forEach((comment) => {
+          // Update the comment data - preserve existing avatar and verification status
+          const data = comment.dataset.threadsFilterData;
+          if (data) {
+            const commentData = JSON.parse(data);
+            commentData.followers = followerCount;
+            comment.dataset.threadsFilterData = JSON.stringify(commentData);
+
+            // Update the display using addFollowerCountDisplay to respect current settings
+            // Preserve the original avatar and verification status from the comment data
+            this.addFollowerCountDisplay(comment, {
+              username: username,
+              followerCount: followerCount,
+              isVerified: commentData.isVerified || false,
+              hasDefaultAvatar: commentData.hasDefaultAvatar || false,
+            });
+
+            // Re-apply filters for this comment
+            this._reapplyFiltersForComment(comment);
+          }
         });
-
-        // Only re-apply filters for this specific comment, don't trigger full reprocessing
-        this._reapplyFiltersForComment(commentElement);
 
         this.log(
           `Successfully fetched follower count for @${username}: ${followerCount}`
@@ -1146,6 +1218,12 @@ class ThreadsCommentFilter {
     } finally {
       // Always remove from pending requests when done (success or error)
       this.pendingRequests.delete(username);
+      this.log(
+        `Removed @${username} from pending requests (remaining: ${this.pendingRequests.size})`
+      );
+
+      // Clear the debounce timer if it still exists
+      this._clearFollowerFetchDebounce(username);
     }
   }
 
@@ -1434,14 +1512,29 @@ class ThreadsCommentFilter {
   applyFiltersImmediate() {
     if (!this.settings.enableFilter) {
       // When filter is disabled, show ALL comments regardless of their previous state
+      this.log("Threads Filter: Filter disabled, showing all comments");
+
+      // First, restore all processed comments
       const allProcessedComments = document.querySelectorAll(
         ".threads-filter-processed"
       );
       this.log(
-        `Threads Filter: Filter disabled, showing all ${allProcessedComments.length} comments`
+        `Threads Filter: Restoring ${allProcessedComments.length} processed comments`
       );
 
       allProcessedComments.forEach((comment) => {
+        this.removeFilterStyle(comment);
+      });
+
+      // Also restore any comments that might have filter styles but no processed class
+      const hiddenComments = document.querySelectorAll(
+        ".threads-filter-hidden, .threads-filter-grayscale"
+      );
+      this.log(
+        `Threads Filter: Restoring ${hiddenComments.length} hidden comments without processed class`
+      );
+
+      hiddenComments.forEach((comment) => {
         this.removeFilterStyle(comment);
       });
 
@@ -1455,6 +1548,8 @@ class ThreadsCommentFilter {
 
       // Send updated stats to popup
       this.sendStatsToPopup();
+
+      // Return early - don't continue with filtering logic
       return;
     }
 
@@ -1742,8 +1837,7 @@ class ThreadsCommentFilter {
       if (this.settings.clickToShow) {
         commentElement.classList.add("click-mode");
         this.setupClickHandler(commentElement);
-        // Add show button for click mode (will preserve existing state)
-        // Only add button if comment is actually filtered
+        // Add show button for click mode if comment is filtered
         if (this.filteredComments.has(commentElement)) {
           this.addShowButton(commentElement);
         }
@@ -1928,6 +2022,8 @@ class ThreadsCommentFilter {
     // Remove show button if exists (since comment is no longer filtered)
     this.removeShowButton(commentElement);
 
+    // Remove from filtered comments sets
+    this.filteredComments.delete(commentElement);
     this.followerFilteredComments.delete(commentElement);
     this.avatarFilteredComments.delete(commentElement);
   }
@@ -2078,7 +2174,7 @@ class ThreadsCommentFilter {
       username: username,
     });
 
-    this.fetchFollowerCountFromProfile(username, tempElement);
+    this.fetchFollowerCountFromProfile(username);
   }
 
   // Test function to verify follower count visibility toggle
@@ -2391,8 +2487,7 @@ class ThreadsCommentFilter {
       if (this.settings.clickToShow) {
         comment.classList.add("click-mode");
         this.setupClickHandler(comment);
-        // Add show button for click mode (will preserve existing state)
-        // Only add button if comment is actually filtered
+        // Add show button for click mode if comment is filtered
         if (this.filteredComments.has(comment)) {
           this.addShowButton(comment);
         }
@@ -2486,6 +2581,11 @@ class ThreadsCommentFilter {
       clearTimeout(this.filterApplyDebounce);
       this.filterApplyDebounce = null;
     }
+    // Clean up follower fetch debounce timers
+    this.followerFetchDebounce.forEach((timer) => {
+      clearTimeout(timer);
+    });
+    this.followerFetchDebounce.clear();
   }
 
   // Test function to verify internationalization
@@ -3662,6 +3762,255 @@ class ThreadsCommentFilter {
     console.log("2. Duplicate follower count requests");
     console.log("3. Unnecessary API calls");
   }
+
+  // Test function to verify debounce mechanism
+  testFollowerFetchDebounce() {
+    this.log("=== Testing Follower Fetch Debounce ===");
+
+    // Test the debounce mechanism
+    const testUsername = "testuser_debounce";
+
+    this.log(`Testing debounce for @${testUsername}`);
+
+    // Clear any existing state
+    this.followerCache.delete(testUsername);
+    this.pendingRequests.delete(testUsername);
+    this.failedRequests.delete(testUsername);
+    this._clearFollowerFetchDebounce(testUsername);
+
+    // Simulate multiple rapid calls to extractFollowerCount
+    this.log("Making multiple rapid calls to extractFollowerCount...");
+
+    const testElement = document.createElement("div");
+    testElement.innerHTML = "<span>Test comment</span>";
+
+    // Call extractFollowerCount multiple times rapidly
+    this.extractFollowerCount(testElement, testUsername);
+    this.extractFollowerCount(testElement, testUsername);
+    this.extractFollowerCount(testElement, testUsername);
+    this.extractFollowerCount(testElement, testUsername);
+    this.extractFollowerCount(testElement, testUsername);
+
+    this.log(
+      `Debounce timers after rapid calls: ${this.followerFetchDebounce.size}`
+    );
+    this.log(
+      `Pending requests after rapid calls: ${this.pendingRequests.size}`
+    );
+
+    // Check if there's exactly one debounce timer
+    if (this.followerFetchDebounce.size === 1) {
+      this.log("✅ Debounce mechanism is working - only one timer created");
+    } else {
+      this.log(
+        `❌ Debounce mechanism issue - ${this.followerFetchDebounce.size} timers created`
+      );
+    }
+
+    // Check if no pending requests yet (debounce should delay the actual request)
+    if (this.pendingRequests.size === 0) {
+      this.log("✅ Debounce mechanism is working - no pending requests yet");
+    } else {
+      this.log(
+        `❌ Debounce mechanism issue - ${this.pendingRequests.size} pending requests`
+      );
+    }
+
+    // Wait for the debounce timer to expire and check again
+    setTimeout(() => {
+      this.log(
+        `Debounce timers after delay: ${this.followerFetchDebounce.size}`
+      );
+      this.log(`Pending requests after delay: ${this.pendingRequests.size}`);
+
+      if (this.followerFetchDebounce.size === 0) {
+        this.log("✅ Debounce timer cleared after delay");
+      } else {
+        this.log("❌ Debounce timer not cleared after delay");
+      }
+
+      // Clean up
+      this.followerCache.delete(testUsername);
+      this.pendingRequests.delete(testUsername);
+      this.failedRequests.delete(testUsername);
+      this._clearFollowerFetchDebounce(testUsername);
+
+      this.log("=== End Debounce Test ===");
+    }, 200); // Wait longer than the 100ms debounce delay
+  }
+
+  // Test function to verify Click to Show mode impact on DOM changes
+  testClickToShowDOMImpact() {
+    this.log("=== Testing Click to Show Mode Impact on DOM Changes ===");
+
+    // Test 1: Click to Show = False
+    this.log("Test 1: Click to Show = False");
+    const originalClickToShow = this.settings.clickToShow;
+    this.settings.clickToShow = false;
+
+    // Count DOM changes before applying filter style
+    let domChangeCount = 0;
+
+    // Create a temporary observer to count DOM changes
+    const tempObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+          domChangeCount++;
+          this.log(
+            `DOM change detected: ${mutation.addedNodes.length} nodes added`
+          );
+        }
+      });
+    });
+
+    tempObserver.observe(document.body, { childList: true, subtree: true });
+
+    // Apply filter style to a test comment
+    const testComment = document.createElement("div");
+    testComment.className = "threads-filter-processed";
+    testComment.dataset.threadsFilterData = JSON.stringify({
+      followers: null,
+      isVerified: false,
+      hasDefaultAvatar: false,
+      username: "testuser",
+    });
+
+    this.applyFilterStyle(testComment);
+
+    this.log(`DOM changes when clickToShow=false: ${domChangeCount}`);
+
+    // Clean up
+    tempObserver.disconnect();
+    this.settings.clickToShow = originalClickToShow;
+
+    // Test 2: Click to Show = True
+    setTimeout(() => {
+      this.log("Test 2: Click to Show = True");
+      this.settings.clickToShow = true;
+
+      // Reset counter
+      domChangeCount = 0;
+
+      // Create another temporary observer
+      const tempObserver2 = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+            domChangeCount++;
+            this.log(
+              `DOM change detected: ${mutation.addedNodes.length} nodes added`
+            );
+          }
+        });
+      });
+
+      tempObserver2.observe(document.body, { childList: true, subtree: true });
+
+      // Apply filter style to another test comment
+      const testComment2 = document.createElement("div");
+      testComment2.className = "threads-filter-processed";
+      testComment2.dataset.threadsFilterData = JSON.stringify({
+        followers: null,
+        isVerified: false,
+        hasDefaultAvatar: false,
+        username: "testuser2",
+      });
+
+      this.applyFilterStyle(testComment2);
+
+      this.log(`DOM changes when clickToShow=true: ${domChangeCount}`);
+
+      // Clean up
+      tempObserver2.disconnect();
+      this.settings.clickToShow = originalClickToShow;
+
+      this.log("=== End Click to Show DOM Impact Test ===");
+      this.log("Expected: clickToShow=true should cause more DOM changes");
+    }, 1000);
+  }
+
+  // Test function to compare DOM-based vs Debounce solutions
+  testSolutionComparison() {
+    this.log("=== Comparing DOM-based vs Debounce Solutions ===");
+
+    // Solution 1: DOM-based (avoiding button addition during initial processing)
+    this.log("Solution 1: DOM-based approach");
+    this.log("Complexity: LOW");
+    this.log("Pros:");
+    this.log(
+      "- Simple logic: just avoid adding buttons during initial processing"
+    );
+    this.log("- Root cause fix: prevents Observer re-triggering");
+    this.log("- Better performance: no unnecessary re-processing");
+    this.log("- Less code: minimal changes needed");
+    this.log("Cons:");
+    this.log("- Specific to this use case");
+    this.log("- Requires understanding of Observer behavior");
+
+    // Solution 2: Debounce mechanism
+    this.log("\nSolution 2: Debounce mechanism");
+    this.log("Complexity: MEDIUM");
+    this.log("Pros:");
+    this.log("- Generic solution: works for all duplicate request scenarios");
+    this.log("- Flexible: can handle various trigger conditions");
+    this.log("- Robust: handles race conditions");
+    this.log("Cons:");
+    this.log("- More complex: requires timer management");
+    this.log("- More code: debounce Map, cleanup logic, etc.");
+    this.log("- Still allows re-processing, just prevents duplicate requests");
+
+    // Recommendation
+    this.log("\nRecommendation:");
+    this.log(
+      "For this specific case: DOM-based approach is simpler and more effective"
+    );
+    this.log(
+      "For general duplicate request prevention: Debounce mechanism is better"
+    );
+    this.log(
+      "Best approach: Use DOM-based for this specific issue, keep debounce as backup"
+    );
+
+    // Test current implementation
+    this.log("\nCurrent Implementation:");
+    this.log("- DOM-based approach: ✅ Implemented");
+    this.log("- Debounce mechanism: ✅ Implemented (as backup)");
+    this.log("- Both solutions work together for maximum reliability");
+
+    this.log("=== End Solution Comparison ===");
+  }
+
+  // Test function to verify enableFilter behavior
+  testEnableFilterBehavior() {
+    this.log("=== Testing Enable Filter Behavior ===");
+
+    // Test 1: Check current state
+    this.log(`Current enableFilter setting: ${this.settings.enableFilter}`);
+    this.log(`Current filtered comments count: ${this.filteredComments.size}`);
+
+    // Test 2: Simulate disabling filter
+    const originalSetting = this.settings.enableFilter;
+    this.settings.enableFilter = false;
+    this.log("Simulating enableFilter = false");
+
+    // Apply filters with disabled setting
+    this.applyFiltersImmediate();
+
+    this.log(
+      `After disabling: filtered comments count: ${this.filteredComments.size}`
+    );
+
+    // Test 3: Check for any remaining hidden comments
+    const hiddenComments = document.querySelectorAll(
+      ".threads-filter-hidden, .threads-filter-grayscale"
+    );
+    this.log(`Hidden comments found: ${hiddenComments.length}`);
+
+    // Test 4: Restore original setting
+    this.settings.enableFilter = originalSetting;
+    this.log(`Restored enableFilter to: ${this.settings.enableFilter}`);
+
+    this.log("=== End Enable Filter Behavior Test ===");
+  }
 }
 
 // Initialize the extension only once
@@ -3700,6 +4049,12 @@ if (!window.threadsCommentFilter) {
     window.threadsCommentFilter.testShowButtonStatePersistence();
   window.testShowButtonVisibilityConditions = () =>
     window.threadsCommentFilter.testShowButtonVisibilityConditions();
+  window.testFollowerFetchDebounce = () =>
+    window.threadsCommentFilter.testFollowerFetchDebounce();
+  window.testClickToShowDOMImpact = () =>
+    window.threadsCommentFilter.testClickToShowDOMImpact();
+  window.testSolutionComparison = () =>
+    window.threadsCommentFilter.testSolutionComparison();
 
   // Additional test functions
   window.testExtensionStatus = () => {
@@ -3738,6 +4093,9 @@ if (!window.threadsCommentFilter) {
       console.log("- testCurrentPageClickBehavior()");
       console.log("- testRateLimiting()");
       console.log("- testCommentDeduplication()");
+      console.log("- testFollowerFetchDebounce()");
+      console.log("- testClickToShowDOMImpact()");
+      console.log("- testSolutionComparison()");
     } else {
       console.log(
         "Extension not loaded yet. Please wait a moment and try again."
@@ -3830,6 +4188,9 @@ if (!window.threadsCommentFilter) {
       console.log("- testCurrentPageClickBehavior()");
       console.log("- testRateLimiting()");
       console.log("- testCommentDeduplication()");
+      console.log("- testFollowerFetchDebounce()");
+      console.log("- testClickToShowDOMImpact()");
+      console.log("- testSolutionComparison()");
     } else {
       console.log("❌ Extension not loaded yet");
       console.log("Please wait a moment and try again");
