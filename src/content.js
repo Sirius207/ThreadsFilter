@@ -1172,7 +1172,7 @@ class ThreadsCommentFilter {
 
         // Update ALL comments by this user, not just the current one
         const allCommentsByUser = document.querySelectorAll(
-          `.threads-filter-processed[data-threads-filter-data*="${username}"]`
+          `.threads-filter-processed[data-threads-filter-data*='"username":"${username}"']`
         );
 
         this.log(
