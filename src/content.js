@@ -1512,14 +1512,29 @@ class ThreadsCommentFilter {
   applyFiltersImmediate() {
     if (!this.settings.enableFilter) {
       // When filter is disabled, show ALL comments regardless of their previous state
+      this.log("Threads Filter: Filter disabled, showing all comments");
+
+      // First, restore all processed comments
       const allProcessedComments = document.querySelectorAll(
         ".threads-filter-processed"
       );
       this.log(
-        `Threads Filter: Filter disabled, showing all ${allProcessedComments.length} comments`
+        `Threads Filter: Restoring ${allProcessedComments.length} processed comments`
       );
 
       allProcessedComments.forEach((comment) => {
+        this.removeFilterStyle(comment);
+      });
+
+      // Also restore any comments that might have filter styles but no processed class
+      const hiddenComments = document.querySelectorAll(
+        ".threads-filter-hidden, .threads-filter-grayscale"
+      );
+      this.log(
+        `Threads Filter: Restoring ${hiddenComments.length} hidden comments without processed class`
+      );
+
+      hiddenComments.forEach((comment) => {
         this.removeFilterStyle(comment);
       });
 
@@ -1534,22 +1549,8 @@ class ThreadsCommentFilter {
       // Send updated stats to popup
       this.sendStatsToPopup();
 
-      // Add pending show buttons after initial processing is complete
-      if (this.settings.clickToShow) {
-        const processedComments = document.querySelectorAll(
-          ".threads-filter-processed"
-        );
-        processedComments.forEach((comment) => {
-          if (
-            comment.dataset.threadsShowButtonPending === "true" &&
-            this.filteredComments.has(comment)
-          ) {
-            this.addShowButton(comment);
-            comment.dataset.threadsShowButtonAdded = "true";
-            delete comment.dataset.threadsShowButtonPending;
-          }
-        });
-      }
+      // Return early - don't continue with filtering logic
+      return;
     }
 
     // Handle follower count visibility
@@ -2021,6 +2022,8 @@ class ThreadsCommentFilter {
     // Remove show button if exists (since comment is no longer filtered)
     this.removeShowButton(commentElement);
 
+    // Remove from filtered comments sets
+    this.filteredComments.delete(commentElement);
     this.followerFilteredComments.delete(commentElement);
     this.avatarFilteredComments.delete(commentElement);
   }
@@ -3974,6 +3977,39 @@ class ThreadsCommentFilter {
     this.log("- Both solutions work together for maximum reliability");
 
     this.log("=== End Solution Comparison ===");
+  }
+
+  // Test function to verify enableFilter behavior
+  testEnableFilterBehavior() {
+    this.log("=== Testing Enable Filter Behavior ===");
+
+    // Test 1: Check current state
+    this.log(`Current enableFilter setting: ${this.settings.enableFilter}`);
+    this.log(`Current filtered comments count: ${this.filteredComments.size}`);
+
+    // Test 2: Simulate disabling filter
+    const originalSetting = this.settings.enableFilter;
+    this.settings.enableFilter = false;
+    this.log("Simulating enableFilter = false");
+
+    // Apply filters with disabled setting
+    this.applyFiltersImmediate();
+
+    this.log(
+      `After disabling: filtered comments count: ${this.filteredComments.size}`
+    );
+
+    // Test 3: Check for any remaining hidden comments
+    const hiddenComments = document.querySelectorAll(
+      ".threads-filter-hidden, .threads-filter-grayscale"
+    );
+    this.log(`Hidden comments found: ${hiddenComments.length}`);
+
+    // Test 4: Restore original setting
+    this.settings.enableFilter = originalSetting;
+    this.log(`Restored enableFilter to: ${this.settings.enableFilter}`);
+
+    this.log("=== End Enable Filter Behavior Test ===");
   }
 }
 
