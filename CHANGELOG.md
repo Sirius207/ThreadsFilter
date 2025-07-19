@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Show Follower Counts Setting Issue**
+  - Fixed issue where follower counts wouldn't appear when "Show Follower Counts" setting was changed from false to true
+  - Added `reprocessCommentsForFollowerCount()` method to create missing follower count elements
+  - Updated settings handlers (`updateSettings`, `applySettings`, `toggleFollowerCount`) to detect when `showFollowerCount` changes from false to true
+  - Added `testFollowerCountDisplayFix()` function for verification
+  - Problem: When `showFollowerCount` was initially false, no follower count elements were created. When later changed to true, `updateFollowerCountVisibility()` had no elements to show
+  - Solution: Detect the transition from false to true and re-process all comments to create missing elements
+
 - **Username Extraction in Repost Scenarios**
   - Fixed issue where reposter username was incorrectly selected instead of actual author username
   - Modified `extractAuthorInfo` to check all username links in a comment and prioritize actual author

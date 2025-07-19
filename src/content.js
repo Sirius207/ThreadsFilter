@@ -470,13 +470,23 @@ class ThreadsCommentFilter {
           this.log("ThreadsCommentFilter: Responding to ping");
           sendResponse({ status: "ok" });
           break;
-        case "updateSettings":
+        case "updateSettings": {
           this.log("ThreadsCommentFilter: Updating settings");
+          const previousShowFollowerCount = this.settings.showFollowerCount;
           this.settings = message.settings;
           this.debug = this.settings.debug || false; // Update debug mode
 
           // 清理 debounce timer
           this._clearFilterApplyDebounce();
+
+          // Check if showFollowerCount was enabled (changed from false to true)
+          if (!previousShowFollowerCount && this.settings.showFollowerCount) {
+            this.log(
+              "ThreadsCommentFilter: showFollowerCount was enabled, re-processing comments"
+            );
+            // Re-process all comments to add follower count displays
+            this.reprocessCommentsForFollowerCount();
+          }
 
           // Apply filters immediately for settings changes
           this.applyFiltersImmediate();
@@ -486,16 +496,27 @@ class ThreadsCommentFilter {
           this.updateBlurAmount();
           this.updateClickMode();
           break;
-        case "applySettings":
+        }
+        case "applySettings": {
           this.log("ThreadsCommentFilter: Applying settings manually");
+          const previousShowFollowerCount = this.settings.showFollowerCount;
           this.settings = message.settings;
 
           // 清理 debounce timer
           this._clearFilterApplyDebounce();
 
+          // Check if showFollowerCount was enabled (changed from false to true)
+          if (!previousShowFollowerCount && this.settings.showFollowerCount) {
+            this.log(
+              "ThreadsCommentFilter: showFollowerCount was enabled via applySettings, re-processing comments"
+            );
+            this.reprocessCommentsForFollowerCount();
+          }
+
           // Apply filters immediately for manual settings application
           this.applyFiltersImmediate();
           break;
+        }
         case "getStats": {
           this.log("ThreadsCommentFilter: Sending stats");
           // Dynamically calculate total processed comments to ensure accuracy
@@ -527,18 +548,31 @@ class ThreadsCommentFilter {
           this.log("ThreadsCommentFilter: Restoring all comments");
           this.restoreAllComments();
           break;
-        case "toggleFollowerCount":
+        case "toggleFollowerCount": {
           this.log("ThreadsCommentFilter: Toggling follower count display");
+          const previousShowFollowerCount = this.settings.showFollowerCount;
           this.settings.showFollowerCount = !this.settings.showFollowerCount;
           this.log(
             `ThreadsCommentFilter: showFollowerCount is now: ${this.settings.showFollowerCount}`
           );
-          this.updateFollowerCountVisibility();
+
+          // If showFollowerCount was enabled (changed from false to true), re-process comments
+          if (!previousShowFollowerCount && this.settings.showFollowerCount) {
+            this.log(
+              "ThreadsCommentFilter: showFollowerCount was enabled via toggle, re-processing comments"
+            );
+            this.reprocessCommentsForFollowerCount();
+          } else {
+            // Just update visibility for existing elements
+            this.updateFollowerCountVisibility();
+          }
+
           sendResponse({
             success: true,
             showFollowerCount: this.settings.showFollowerCount,
           });
           break;
+        }
         case "resetRateLimit":
           this.log("ThreadsCommentFilter: Resetting rate limit state");
           this.isRateLimited = false;
@@ -4143,6 +4177,106 @@ class ThreadsCommentFilter {
     );
     return allPassed;
   }
+
+  // New method to re-process all comments for follower count display
+  reprocessCommentsForFollowerCount() {
+    this.log(
+      "Threads Filter: Re-processing comments for follower count display"
+    );
+
+    const processedComments = document.querySelectorAll(
+      ".threads-filter-processed"
+    );
+    this.log(
+      `Threads Filter: Re-processing ${processedComments.length} comments for follower counts`
+    );
+
+    processedComments.forEach((comment) => {
+      const data = comment.dataset.threadsFilterData;
+      if (data) {
+        const commentData = JSON.parse(data);
+        if (commentData.followers !== null) {
+          // Re-add follower count display for this comment
+          this.addFollowerCountDisplay(comment, {
+            username: commentData.username,
+            followerCount: commentData.followers,
+            isVerified: commentData.isVerified || false,
+            hasDefaultAvatar: commentData.hasDefaultAvatar || false,
+          });
+        }
+      }
+    });
+
+    this.log(
+      "Threads Filter: Finished re-processing comments for follower count display"
+    );
+  }
+
+  // Test function to verify the follower count display fix
+  testFollowerCountDisplayFix() {
+    this.log("=== Testing Follower Count Display Fix ===");
+
+    // Get current setting
+    const currentSetting = this.settings.showFollowerCount;
+    this.log(`Current showFollowerCount setting: ${currentSetting}`);
+
+    // Count existing follower count elements
+    const existingElements = document.querySelectorAll(
+      ".threads-follower-count"
+    );
+    this.log(`Existing follower count elements: ${existingElements.length}`);
+
+    // Test the fix by temporarily enabling follower counts
+    if (!currentSetting) {
+      this.log("Temporarily enabling showFollowerCount to test fix...");
+      this.settings.showFollowerCount = true;
+      this.reprocessCommentsForFollowerCount();
+
+      const newElements = document.querySelectorAll(".threads-follower-count");
+      this.log(`Follower count elements after fix: ${newElements.length}`);
+
+      if (newElements.length > existingElements.length) {
+        this.log("✅ SUCCESS: New follower count elements were created!");
+      } else {
+        this.log("❌ FAILURE: No new follower count elements were created");
+      }
+
+      // Restore original setting
+      this.settings.showFollowerCount = currentSetting;
+      this.updateFollowerCountVisibility();
+    } else {
+      this.log(
+        "showFollowerCount is already enabled, testing disable/enable cycle..."
+      );
+
+      // Disable first
+      this.settings.showFollowerCount = false;
+      this.updateFollowerCountVisibility();
+
+      // Then enable to test the fix
+      this.settings.showFollowerCount = true;
+      this.reprocessCommentsForFollowerCount();
+
+      const finalElements = document.querySelectorAll(
+        ".threads-follower-count"
+      );
+      this.log(
+        `Follower count elements after disable/enable cycle: ${finalElements.length}`
+      );
+
+      if (finalElements.length > 0) {
+        this.log(
+          "✅ SUCCESS: Follower count elements are visible after disable/enable cycle!"
+        );
+      } else {
+        this.log(
+          "❌ FAILURE: No follower count elements after disable/enable cycle"
+        );
+      }
+    }
+
+    this.log("=== End Follower Count Display Fix Test ===");
+  }
 }
 
 // Initialize the extension only once
@@ -4187,6 +4321,12 @@ if (!window.threadsCommentFilter) {
     window.threadsCommentFilter.testClickToShowDOMImpact();
   window.testSolutionComparison = () =>
     window.threadsCommentFilter.testSolutionComparison();
+  window.testEnableFilterBehavior = () =>
+    window.threadsCommentFilter.testEnableFilterBehavior();
+  window.testUsernameExtraction = () =>
+    window.threadsCommentFilter.testUsernameExtraction();
+  window.testFollowerCountDisplayFix = () =>
+    window.threadsCommentFilter.testFollowerCountDisplayFix();
 
   // Additional test functions
   window.testExtensionStatus = () => {
