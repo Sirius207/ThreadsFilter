@@ -1,0 +1,23 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 Documentation
+    url: https://github.com/Sirius207/ThreadsFilter#readme
+    about: Please read the documentation before creating an issue.
+  - name: 💬 Discussions
+    url: https://github.com/Sirius207/ThreadsFilter/discussions
+    about: Ask questions and share ideas in our discussions.
+  - name: 🐛 Bug Report
+    url: https://github.com/Sirius207/ThreadsFilter/issues/new?template=bug_report.md
+    about: Report a bug or issue with ThreadsFilter.
+  - name: ✨ Feature Request
+    url: https://github.com/Sirius207/ThreadsFilter/issues/new?template=feature_request.md
+    about: Suggest a new feature for ThreadsFilter.
+  - name: 🌍 Translation Request
+    url: https://github.com/Sirius207/ThreadsFilter/issues/new?template=translation_request.md
+    about: Request new language support or report translation issues.
+  - name: ⚡ Performance Issue
+    url: https://github.com/Sirius207/ThreadsFilter/issues/new?template=performance_issue.md
+    about: Report performance problems with ThreadsFilter.
+  - name: 🔒 Security Issue
+    url: https://github.com/Sirius207/ThreadsFilter/issues/new?template=security_issue.md
+    about: Report security vulnerabilities in ThreadsFilter.
